@@ -9,18 +9,17 @@ import {
 } from "@/components/ui/sidebar";
 import {Heading} from "@/components/heading";
 import {Button} from "@/components/ui/button";
-import { useRouter } from 'next/navigation';
+import {useRouter} from 'next/navigation';
 import {Input} from "@/components/ui/input";
 import {LogInIcon, SearchIcon} from "lucide-react";
 import * as React from "react";
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import {useEffect, useState} from 'react';
+import {supabase} from '@/lib/supabaseClient';
 import UserProfilePicture from "./ProfilePicture";
 import UserFullName from "./Username";
-import { useTheme } from "next-themes";
+import {useTheme} from "next-themes";
 import SunIcon from "@heroicons/react/24/outline/SunIcon";
 import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
-
 
 
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -37,28 +36,29 @@ export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSid
 
     useEffect(() => {
         const getSession = async () => {
-          const { data: { session } } = await supabase.auth.getSession();
-          setLoggedIn(!!session?.user);
+            const {data: {session}} = await supabase.auth.getSession();
+            setLoggedIn(!!session?.user);
         };
-    
+
         getSession();
-    
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          setLoggedIn(!!session?.user);
+
+        const {data: listener} = supabase.auth.onAuthStateChange((event, session) => {
+            setLoggedIn(!!session?.user);
         });
-    
+
         return () => {
-          listener.subscription.unsubscribe();
+            listener.subscription.unsubscribe();
         };
-      }, []);
+    }, []);
 
     function toggleSidebar() {
         changeSidebarState(!isSidebarOpen);
     }
 
-    function toggleTheme(){
+    function toggleTheme() {
         setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
     }
+
     const router = useRouter();
 
     return (
@@ -86,30 +86,29 @@ export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSid
                     <SidebarGroup/>
                 </SidebarContent>
                 <SidebarFooter>
-                {!loggedIn && (
-                    <Button 
-                         className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-10 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`} onClick={() => router.push('/login')}>
-                        <div className={`flex gap-3 items-center`}>
-                            <LogInIcon/>
-                            Login
+                    {!loggedIn && (
+                        <Button
+                            className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-10 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
+                            onClick={() => router.push('/login')}>
+                            <div className={`flex gap-3 items-center`}>
+                                <LogInIcon/>
+                                Login
+                            </div>
+                        </Button>
+                    )}
+                    {loggedIn && (
+                        <div className="flex items-center gap-3 bg-background/50 p-3 rounded-xl">
+                            <div className="w-10 h-10 flex justify-center items-center rounded-full overflow-hidden">
+                                <UserProfilePicture/>
+                            </div>
+                            <div className="flex flex-col">
+                                <div className="text-sm text-foreground font-medium">
+                                    <UserFullName/>
+                                </div>
+                                <span className="text-xs text-muted-foreground">Free</span>
+                            </div>
                         </div>
-                    </Button>
-                )}
-{loggedIn && (
-  <div className="flex items-center gap-3 bg-[#1e1e1e] p-3 rounded-xl">
-    <div className="w-10 h-10 rounded-full overflow-hidden">
-      <UserProfilePicture />
-    </div>
-    <div className="flex flex-col">
-      <div className="text-sm text-white font-medium">
-        <UserFullName />
-      </div>
-      <span className="text-xs text-gray-400">Free</span>
-    </div>
-  </div>
-)}
-
-
+                    )}
 
 
                 </SidebarFooter>
@@ -131,13 +130,14 @@ export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSid
                 {isSidebarOpen && (
                     <div className={`grow shrink-0 flex flex-col bg-sidebar`}>
                         <div className={`relative bg-sidebar pb-4 flex w-full place-content-end-safe overflow-visible`}>
-                            <div className={`icons justify-center absolute -bottom-8 right-0 p-1 pb-2 flex gap-2 pl-4 bg-sidebar rounded-bl-[3rem] border-b-1 border-l-0`}>
+                            <div
+                                className={`icons justify-center absolute -bottom-8 right-0 p-1 pb-2 flex gap-2 pl-4 bg-sidebar rounded-bl-[3rem] border-b-1 border-l-0`}>
                                 <Button variant={"ghost"} className={`rounded-3xl`} onClick={toggleTheme}>
-                                    <SunIcon className={`size-6`} />
+                                    <SunIcon className={`size-6`}/>
                                 </Button>
 
                                 <Button variant={"ghost"} className={`rounded-3xl`}>
-                                    <AdjustmentsHorizontalIcon className={`size-6`} />
+                                    <AdjustmentsHorizontalIcon className={`size-6`}/>
                                 </Button>
                             </div>
                         </div>
@@ -151,12 +151,12 @@ export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSid
                 {!isSidebarOpen && (
                     <div className={`absolute right-0 p-1 bg-accent h-fit rounded-xl m-2`}>
                         <Button variant={"ghost"} className={`rounded-3xl`} onClick={toggleTheme}>
-                            <SunIcon className={`size-6`} />
+                            <SunIcon className={`size-6`}/>
                         </Button>
 
                         <Button variant={"ghost"} className={`rounded-3xl`}>
-                            <AdjustmentsHorizontalIcon className={`size-6`} />
-                        </Button>                    </div>
+                            <AdjustmentsHorizontalIcon className={`size-6`}/>
+                        </Button></div>
                 )}
             </div>
         </div>
