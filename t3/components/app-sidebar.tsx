@@ -62,7 +62,7 @@ export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSid
     const router = useRouter();
 
     return (
-        <div className={`flex flex-row grow`}>
+        <div className={`flex flex-row w-full`}>
             <Sidebar className={`!border-r-0`}>
                 <SidebarHeader className={`relative flex items-center pt-4 justify-center h-12`}>
                     <SidebarTrigger onClick={toggleSidebar} className={`absolute left-5`}/>
@@ -114,7 +114,7 @@ export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSid
                 </SidebarFooter>
             </Sidebar>
 
-            <div className={`content-wrapper grow flex`}>
+            <div className={`content-wrapper flex flex-col grow`}>
                 {!isSidebarOpen && (
                     <div className={`absolute p-1 bg-accent h-fit rounded-xl m-2`}>
                         <SidebarTrigger onClick={toggleSidebar}/>

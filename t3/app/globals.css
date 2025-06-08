@@ -5,6 +5,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+article {
+  @apply prose;
+}
+
 :root {
     --font-geist-sans: 'DM Sans', sans-serif;
     --font-geist-mono: 'Inter', monospace;
