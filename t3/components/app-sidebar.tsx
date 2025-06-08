@@ -9,9 +9,16 @@ import {
 } from "@/components/ui/sidebar";
 import {Heading} from "@/components/heading";
 import {Button} from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
 import {Input} from "@/components/ui/input";
 import {LogInIcon, SearchIcon} from "lucide-react";
 import * as React from "react";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import UserProfilePicture from "./ProfilePicture";
+import UserFullName from "./Username";
+
+
 
 export interface AppSidebarProps  extends React.PropsWithChildren {
     componentProps?: React.ComponentProps<"div">;
@@ -21,9 +28,30 @@ export interface AppSidebarProps  extends React.PropsWithChildren {
 
 export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
 
+    const [loggedIn, setLoggedIn] = useState(false);
+
+
+    useEffect(() => {
+        const getSession = async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          setLoggedIn(!!session?.user);
+        };
+    
+        getSession();
+    
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+          setLoggedIn(!!session?.user);
+        });
+    
+        return () => {
+          listener.subscription.unsubscribe();
+        };
+      }, []);
+
     function toggleSidebar() {
         onChange(!value);
     }
+    const router = useRouter();
 
     return (
         <div className={`flex flex-row`}>
@@ -36,6 +64,7 @@ export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
                 </SidebarHeader>
                 <SidebarContent>
                     <SidebarGroup className={`flex flex-col items-center gap-3`}>
+
                         <Button className={`font-bold w-[90%] cursor-pointer`}>
                             New Chat
                         </Button>
@@ -49,13 +78,32 @@ export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
                     <SidebarGroup/>
                 </SidebarContent>
                 <SidebarFooter>
-                    <Button
-                        className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-10 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}>
+                {!loggedIn && (
+                    <Button 
+                         className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-10 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`} onClick={() => router.push('/login')}>
                         <div className={`flex gap-3 items-center`}>
                             <LogInIcon/>
                             Login
                         </div>
                     </Button>
+                )}
+{loggedIn && (
+  <div className="flex items-center gap-3 bg-[#1e1e1e] p-3 rounded-xl">
+    <div className="w-10 h-10 rounded-full overflow-hidden">
+      <UserProfilePicture />
+    </div>
+    <div className="flex flex-col">
+      <div className="text-sm text-white font-medium">
+        <UserFullName />
+      </div>
+      <span className="text-xs text-gray-400">Free</span>
+    </div>
+  </div>
+)}
+
+
+
+
                 </SidebarFooter>
             </Sidebar>
 
