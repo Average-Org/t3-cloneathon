@@ -11,7 +11,7 @@ import {Heading} from "@/components/heading";
 import {Button} from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
 import {Input} from "@/components/ui/input";
-import {LogInIcon, SearchIcon} from "lucide-react";
+import {LogInIcon, SearchIcon, Settings2Icon, SettingsIcon} from "lucide-react";
 import * as React from "react";
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -20,13 +20,14 @@ import UserFullName from "./Username";
 
 
 
-export interface AppSidebarProps  extends React.PropsWithChildren {
+export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
     componentProps?: React.ComponentProps<"div">;
-    value: boolean;
-    onChange: (value: boolean) => void;
+    isSidebarOpen: boolean;
+    changeSidebarState: (value: boolean) => void;
 }
 
-export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
+export function AppSidebar({isSidebarOpen, changeSidebarState, children}: AppSidebarProps) {
+    const {setTheme} = useTheme();
 
     const [loggedIn, setLoggedIn] = useState(false);
 
@@ -49,13 +50,17 @@ export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
       }, []);
 
     function toggleSidebar() {
-        onChange(!value);
+        changeSidebarState(!isSidebarOpen);
+    }
+
+    function toggleTheme(){
+        setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
     }
     const router = useRouter();
 
     return (
-        <div className={`flex flex-row`}>
-            <Sidebar className={``}>
+        <div className={`flex flex-row grow`}>
+            <Sidebar className={`!border-r-0`}>
                 <SidebarHeader className={`relative flex items-center pt-4 justify-center h-12`}>
                     <SidebarTrigger onClick={toggleSidebar} className={`absolute left-5`}/>
                     <Heading className={`text-center`}>
@@ -107,24 +112,50 @@ export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
                 </SidebarFooter>
             </Sidebar>
 
-            <div className={`content-wrapper`}>
-                {!value && (
-                    <div className={`p-1 bg-accent h-fit rounded-xl m-2`}>
+            <div className={`content-wrapper grow flex`}>
+                {!isSidebarOpen && (
+                    <div className={`absolute p-1 bg-accent h-fit rounded-xl m-2`}>
                         <SidebarTrigger onClick={toggleSidebar}/>
                     </div>
                 )}
-            </div>
 
-
-
-            {componentProps && (
-                <div {...componentProps} className={`h-fit p-2 bg-sidebar grow shrink-0`}>
-                    <div>
-                        Hi
+                {!isSidebarOpen && (
+                    <div className={`bg-background grow border`}>
+                        {children}
                     </div>
-                    {componentProps.children}
-                </div>
-            )}
+                )}
+
+                {isSidebarOpen && (
+                    <div className={`grow shrink-0 flex flex-col bg-sidebar`}>
+                        <div className={`relative bg-sidebar pb-4 flex w-full place-content-end-safe overflow-visible`}>
+                            <div className={`icons justify-center absolute -bottom-8 right-0 p-1 pb-2 flex gap-2 pl-4 bg-sidebar rounded-bl-[3rem] border-b-1 border-l-0`}>
+                                <Button variant={"ghost"} className={`rounded-3xl`} onClick={toggleTheme}>
+                                    <SunIcon className={`size-6`} />
+                                </Button>
+
+                                <Button variant={"ghost"} className={`rounded-3xl`}>
+                                    <AdjustmentsHorizontalIcon className={`size-6`} />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className={`bg-background grow rounded-tl-xl border`}>
+                            {children}
+                        </div>
+                    </div>
+                )}
+
+                {!isSidebarOpen && (
+                    <div className={`absolute right-0 p-1 bg-accent h-fit rounded-xl m-2`}>
+                        <Button variant={"ghost"} className={`rounded-3xl`} onClick={toggleTheme}>
+                            <SunIcon className={`size-6`} />
+                        </Button>
+
+                        <Button variant={"ghost"} className={`rounded-3xl`}>
+                            <AdjustmentsHorizontalIcon className={`size-6`} />
+                        </Button>                    </div>
+                )}
+            </div>
         </div>
     );
 }
