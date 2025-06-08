@@ -1,15 +1,8 @@
-import {SidebarProvider} from "@/components/ui/sidebar";
-import {AppSidebar} from "@/components/app-sidebar";
+"use client";
+import HomeClient from "@/app/home-client";
 
 export default function Home() {
-  return (
-    <>
-      <SidebarProvider>
-        <AppSidebar />
-        <main>
-
-        </main>
-      </SidebarProvider>
-    </>
+    return (
+    <HomeClient />
   );
 }

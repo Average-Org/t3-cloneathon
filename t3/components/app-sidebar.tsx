@@ -11,18 +11,23 @@ import {Heading} from "@/components/heading";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {LogInIcon, SearchIcon} from "lucide-react";
-import {useState} from "react";
+import * as React from "react";
 
-export function AppSidebar() {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+export interface AppSidebarProps  extends React.PropsWithChildren {
+    componentProps?: React.ComponentProps<"div">;
+    value: boolean;
+    onChange: (value: boolean) => void;
+}
+
+export function AppSidebar({value, onChange, componentProps}: AppSidebarProps) {
 
     function toggleSidebar() {
-        setSidebarOpen(!sidebarOpen);
+        onChange(!value);
     }
 
     return (
-        <>
-            <Sidebar>
+        <div className={`flex flex-row`}>
+            <Sidebar className={``}>
                 <SidebarHeader className={`relative flex items-center pt-4 justify-center h-12`}>
                     <SidebarTrigger onClick={toggleSidebar} className={`absolute left-5`}/>
                     <Heading className={`text-center`}>
@@ -53,12 +58,25 @@ export function AppSidebar() {
                     </Button>
                 </SidebarFooter>
             </Sidebar>
-            
-            {!sidebarOpen && (
-                <div className={`p-1 bg-accent h-fit rounded-xl m-2`}>
-                    <SidebarTrigger onClick={toggleSidebar} />
+
+            <div className={`content-wrapper`}>
+                {!value && (
+                    <div className={`p-1 bg-accent h-fit rounded-xl m-2`}>
+                        <SidebarTrigger onClick={toggleSidebar}/>
+                    </div>
+                )}
+            </div>
+
+
+
+            {componentProps && (
+                <div {...componentProps} className={`h-fit p-2 bg-sidebar grow shrink-0`}>
+                    <div>
+                        Hi
+                    </div>
+                    {componentProps.children}
                 </div>
             )}
-        </>
+        </div>
     );
 }
