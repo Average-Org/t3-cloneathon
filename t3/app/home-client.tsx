@@ -51,7 +51,7 @@ export default function HomeClient() {
                             <div key={message.id}
                                  className={`flex w-full max-w-[80%] ${message.role === 'user' && ('justify-end')} `}>
                                 <div className={`whitespace-pre-wrap max-w-[70%] ${message.role === 'user' && ('bg-accent/75 ')} p-4 rounded-xl`}>
-                                    <article className={`prose dark:prose-invert`}>
+                                    <article className={``}>
                                         {message.parts.map((part, i) => {
                                             switch (part.type) {
                                                 case 'text':
