@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "T3 Chat - Clone by @renderbr",
+  title: "T3 Chat - Clone by @renderbr and @raynordev",
   description: "T3 Chat Full clone written in NextJS",
 };
 
