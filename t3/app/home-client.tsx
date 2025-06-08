@@ -6,10 +6,9 @@ import {useState} from "react";
 import {Heading} from "@/components/heading";
 import {Textarea} from "@/components/ui/textarea";
 import {Button} from "@/components/ui/button";
-import {ArrowUpIcon, SparklesIcon} from "@heroicons/react/24/outline";
+import {ArrowUpIcon} from "@heroicons/react/24/outline";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {SelectIcon} from "@radix-ui/react-select";
-import {BotIcon, CloudLightningIcon} from "lucide-react";
+import {BotIcon} from "lucide-react";
 
 export default function HomeClient() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -27,7 +26,7 @@ export default function HomeClient() {
 
                     <div className={`flex justify-center items-center`}>
                         <div className={`w-[50%]`}>
-                            <div className={`relative`}>
+                            <div className={`relative `}>
                                 <Textarea className={`h-28 p-5 border-b-0 rounded-b-none resize-none`}
                                           placeholder={`Type your message here...`}>
 

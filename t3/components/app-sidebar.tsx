@@ -11,12 +11,15 @@ import {Heading} from "@/components/heading";
 import {Button} from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
 import {Input} from "@/components/ui/input";
-import {LogInIcon, SearchIcon, Settings2Icon, SettingsIcon} from "lucide-react";
+import {LogInIcon, SearchIcon} from "lucide-react";
 import * as React from "react";
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import UserProfilePicture from "./ProfilePicture";
 import UserFullName from "./Username";
+import { useTheme } from "next-themes";
+import SunIcon from "@heroicons/react/24/outline/SunIcon";
+import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
 
 
 
