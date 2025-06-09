@@ -2,7 +2,7 @@
 
 import {SidebarProvider} from "@/components/ui/sidebar";
 import {AppSidebar} from "@/components/app-sidebar";
-import {useState} from "react";
+import {Children, useState} from "react";
 import {Heading} from "@/components/heading";
 import {Textarea} from "@/components/ui/textarea";
 import {Button} from "@/components/ui/button";
@@ -14,10 +14,18 @@ import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import Markdown from "@/utils/markdown";
 
 export default function HomeClient() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const {messages, input, handleInputChange, handleSubmit, error} = useChat();
+
+    function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+        if(event.code === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            handleSubmit();
+        }
+    }
 
     return (<div className={``}>
         <SidebarProvider>
@@ -51,12 +59,11 @@ export default function HomeClient() {
                             <div key={message.id}
                                  className={`flex w-full max-w-[80%] ${message.role === 'user' && ('justify-end')} `}>
                                 <div className={`whitespace-pre-wrap max-w-[70%] ${message.role === 'user' && ('bg-accent/75 ')} p-4 rounded-xl`}>
-                                    <article className={``}>
+                                    <article className={`whitespace-normal `}>
                                         {message.parts.map((part, i) => {
                                             switch (part.type) {
                                                 case 'text':
-                                                    return <ReactMarkdown remarkPlugins={[remarkGfm]}
-                                                                          rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}  key={`${message.id}-${i}`}>{part.text}</ReactMarkdown>;
+                                                    return <Markdown key={`${message.id}-${i}`} text={part.text} />;
                                             }
                                         })}
                                     </article>
@@ -70,7 +77,7 @@ export default function HomeClient() {
                     <div className={`flex justify-center items-center`}>
                         <div className={`w-[50%]`}>
                             <div className={`relative `}>
-                                <Textarea value={input} onChange={handleInputChange}
+                                <Textarea onKeyDown={handleKey} value={input} onChange={handleInputChange}
                                           className={`h-28 p-5 border-b-0 rounded-b-none resize-none`}
                                           placeholder={`Type your message here...`}>
 
