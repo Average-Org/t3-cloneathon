@@ -2,18 +2,15 @@
 
 import {SidebarProvider} from "@/components/ui/sidebar";
 import {AppSidebar} from "@/components/app-sidebar";
-import {Children, useState} from "react";
+import {useState} from "react";
 import {Heading} from "@/components/heading";
 import {Textarea} from "@/components/ui/textarea";
 import {Button} from "@/components/ui/button";
 import {ArrowUpIcon, PlusIcon} from "@heroicons/react/24/outline";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {AlertCircleIcon, BotIcon, Plus} from "lucide-react";
+import {AlertCircleIcon, BotIcon} from "lucide-react";
 import {useChat} from "@ai-sdk/react";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 import Markdown from "@/utils/markdown";
 
 export default function HomeClient() {
@@ -77,13 +74,8 @@ export default function HomeClient() {
                     <div className={`flex justify-center items-center`}>
                         <div className={`w-[60%]`}>
                             <div className={`relative `}>
-<<<<<<< HEAD
-                                <Textarea value={input} onChange={handleInputChange}
-                                          className={`h-30 p-5 border-b-0 rounded-b-none resize-none`}
-=======
                                 <Textarea onKeyDown={handleKey} value={input} onChange={handleInputChange}
                                           className={`h-28 p-5 border-b-0 rounded-b-none resize-none`}
->>>>>>> f8c6b259c6733766b5b27b2805a039b0f560046a
                                           placeholder={`Type your message here...`}>
 
                                 </Textarea>
@@ -91,12 +83,7 @@ export default function HomeClient() {
                                         className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}>
                                     <ArrowUpIcon/>
                                 </Button>
-                                <Button variant={"outline"}
-                                        className={`absolute bottom-2 right-143 rounded-3xl !px-[0.75rem]`}>
-                                    <PlusIcon/>
-                                </Button>
-
-                                <div className={`absolute bottom-2 left-3`}>
+                                <div className={`absolute bottom-2 left-3 flex gap-2`}>
                                     <Select>
                                         <SelectTrigger>
                                             <BotIcon/>
@@ -113,6 +100,11 @@ export default function HomeClient() {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
+
+                                    <Button variant={"outline"}
+                                            className={`rounded-3xl !px-[0.75rem]`}>
+                                        <PlusIcon/>
+                                    </Button>
                                 </div>
                             </div>
                         </div>

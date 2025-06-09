@@ -30,7 +30,7 @@ const components = {
     /* inline code */
     code({node, inline, ...p}) {
         return inline ? (
-            <code {...p} className="rounded bg-zinc-800/40 px-1 py-0.5 font-mono text-[90%]" />
+            <code {...p} className="rounded px-1 py-0.5 font-mono text-[90%]" />
         ) : (
             /* fenced block handled by <pre> below */
             <code {...p} />
@@ -39,7 +39,7 @@ const components = {
 
     /* fenced code block */
     pre: ({ node, ...p }) => (
-        <pre {...p} className="my-4 rounded-lg bg-zinc-900 p-4 overflow-x-auto" />
+        <pre {...p} className="my-4 rounded-lg py-4 overflow-x-auto" />
     ),
 
     /* quotes & rules */
