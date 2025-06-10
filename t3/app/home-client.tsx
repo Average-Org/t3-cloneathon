@@ -6,7 +6,7 @@ import {useState} from "react";
 import {Heading} from "@/components/heading";
 import {Textarea} from "@/components/ui/textarea";
 import {Button} from "@/components/ui/button";
-import {ArrowUpIcon, PlusIcon} from "@heroicons/react/24/outline";
+import {ArrowUpIcon, PaperClipIcon, GlobeAltIcon} from "@heroicons/react/24/outline";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {AlertCircleIcon, BotIcon} from "lucide-react";
 import {useChat} from "@ai-sdk/react";
@@ -103,7 +103,12 @@ export default function HomeClient() {
 
                                     <Button variant={"outline"}
                                             className={`rounded-3xl !px-[0.75rem]`}>
-                                        <PlusIcon/>
+                                        <GlobeAltIcon/>
+                                        Search
+                                    </Button>
+                                    <Button variant={"outline"}
+                                            className={`rounded-3xl !px-[0.75rem]`}>
+                                        <PaperClipIcon className="stroke-2"/>
                                     </Button>
                                 </div>
                             </div>
