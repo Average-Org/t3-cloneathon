@@ -6,7 +6,7 @@ import {useState} from "react";
 import {Heading} from "@/components/heading";
 import {Textarea} from "@/components/ui/textarea";
 import {Button} from "@/components/ui/button";
-import {ArrowUpIcon, PaperClipIcon, GlobeAltIcon} from "@heroicons/react/24/outline";
+import {ArrowUpIcon, PaperClipIcon, GlobeAltIcon, XMarkIcon} from "@heroicons/react/24/outline";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {AlertCircleIcon, BotIcon} from "lucide-react";
 import {useChat} from "@ai-sdk/react";
@@ -15,7 +15,8 @@ import Markdown from "@/utils/markdown";
 
 export default function HomeClient() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const {messages, input, handleInputChange, handleSubmit, error} = useChat();
+    const { messages, input, handleInputChange, handleSubmit, error, isLoading, stop } = useChat(); 
+    
 
     function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
         if(event.code === 'Enter' && !event.shiftKey) {
@@ -55,7 +56,7 @@ export default function HomeClient() {
                         {messages.map(message => (
                             <div key={message.id}
                                  className={`flex w-full max-w-[80%] ${message.role === 'user' && ('justify-end')} `}>
-                                <div className={`whitespace-pre-wrap max-w-[70%] ${message.role === 'user' && ('bg-accent/75 ')} px-4 py-2 rounded-xl`}>
+                                <div className={`whitespace-pre-wrap max-w-[70%] ${message.role === 'user' && ('bg-accent/75 ')} p-4 rounded-xl`}>
                                     <article className={`whitespace-normal `}>
                                         {message.parts.map((part, i) => {
                                             switch (part.type) {
@@ -79,10 +80,17 @@ export default function HomeClient() {
                                           placeholder={`Type your message here...`}>
 
                                 </Textarea>
-                                <Button onClick={handleSubmit} variant={"outline"}
-                                        className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}>
-                                    <ArrowUpIcon/>
-                                </Button>
+                                {isLoading ? (
+                    <Button onClick={stop} variant={"outline"}
+                            className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}>
+                      <XMarkIcon className="h-5 w-5" /> {/* X button when loading */}
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSubmit} variant={"outline"}
+                            className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}>
+                      <ArrowUpIcon /> {/* Send button when not loading */}
+                    </Button>
+                  )}
                                 <div className={`absolute bottom-2 left-3 flex gap-2`}>
                                     <Select>
                                         <SelectTrigger>
