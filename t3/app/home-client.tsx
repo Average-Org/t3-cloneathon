@@ -10,6 +10,7 @@ import {
   ArrowUpIcon,
   PaperClipIcon,
   GlobeAltIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   Select,
@@ -32,7 +33,15 @@ interface HomeClientProps {
 
 export default function HomeClient({ chatId }: HomeClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { messages, input, handleInputChange, handleSubmit, error } = useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    error,
+    isLoading,
+    stop,
+  } = useChat({
     api: "/api/chat",
     credentials: "include",
   });
@@ -65,7 +74,13 @@ export default function HomeClient({ chatId }: HomeClientProps) {
         return;
       }
 
-      handleSubmit({}, { headers: { Authorization: `Bearer ${await getAccessToken()}` }, data: { conversationId: currentChatId } });
+      handleSubmit(
+        {},
+        {
+          headers: { Authorization: `Bearer ${await getAccessToken()}` },
+          data: { conversationId: currentChatId },
+        }
+      );
     };
 
     insert();
@@ -179,13 +194,25 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                     className={`h-28 p-5 border-b-0 rounded-b-none resize-none`}
                     placeholder={`Type your message here...`}
                   ></Textarea>
-                  <Button
-                    onClick={insertMessage}
-                    variant={"outline"}
-                    className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
-                  >
-                    <ArrowUpIcon />
-                  </Button>
+
+                  {isLoading ? (
+                    <Button
+                      onClick={stop}
+                      variant={"outline"}
+                      className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
+                    >
+                      <XMarkIcon className="h-5 w-5" />{" "}
+                      {/* X button when loading */}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleSubmit}
+                      variant={"outline"}
+                      className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
+                    >
+                      <ArrowUpIcon /> {/* Send button when not loading */}
+                    </Button>
+                  )}
                   <div className={`absolute bottom-2 left-3 flex gap-2`}>
                     <Select>
                       <SelectTrigger>
