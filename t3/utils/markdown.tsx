@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import CodeBlock from "@/components/code-block";
 
+
 const components: Components = {
     /* ─────────────────────── headings ─────────────────────── */
     h1: ({ ...p }) => <h1 {...p} className="text-5xl font-bold mt-4"   />,
@@ -29,11 +30,11 @@ const components: Components = {
     ),
 
     code(props) {
-        const {children, className, ...p} = props;
+        const {children, node, className, ...p} = props;
         const match = /language-(\w+)/.exec(className || '')
-
+        
         return match ? (
-            <CodeBlock {...props} ref={undefined} />
+            <CodeBlock{...props} ref={undefined} />
         ) : (
             <code {...p} className="bg-sidebar/80 rounded px-[0.3rem] py-[0.25rem] text-sm font-mono" >
                 {children}
