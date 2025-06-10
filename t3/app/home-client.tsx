@@ -55,7 +55,7 @@ export default function HomeClient() {
                         {messages.map(message => (
                             <div key={message.id}
                                  className={`flex w-full max-w-[80%] ${message.role === 'user' && ('justify-end')} `}>
-                                <div className={`whitespace-pre-wrap max-w-[70%] ${message.role === 'user' && ('bg-accent/75 ')} p-4 rounded-xl`}>
+                                <div className={`whitespace-pre-wrap max-w-[70%] ${message.role === 'user' && ('bg-accent/75 ')} px-4 py-2 rounded-xl`}>
                                     <article className={`whitespace-normal `}>
                                         {message.parts.map((part, i) => {
                                             switch (part.type) {
