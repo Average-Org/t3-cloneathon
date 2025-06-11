@@ -51,7 +51,10 @@ export function AppSidebar({
     };
 
     const getConversations = async () => {
-      const { data, error } = await supabase.from("conversations").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (!data) {
         throw new Error("Data could not be retrieved.");
@@ -92,7 +95,10 @@ export function AppSidebar({
         </SidebarHeader>
         <SidebarContent className={`overflow-x-hidden`}>
           <SidebarGroup className={`flex flex-col items-center gap-3 `}>
-            <Button onClick={() => router.push('/')} className={`font-bold w-[90%] cursor-pointer`}>
+            <Button
+              onClick={() => router.push("/")}
+              className={`font-bold w-[90%] cursor-pointer`}
+            >
               New Chat
             </Button>
 
@@ -108,10 +114,10 @@ export function AppSidebar({
               conversations.map((conversation) => (
                 <Button
                   key={conversation.id}
-                  className={`!bg-transparent cursor-pointer text-muted-foreground text-ellipsis overflow-ellipsis !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
+                  className={`!bg-transparent cursor-pointer text-muted-foreground whitespace-nowrap !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
                   onClick={() => router.push(`/chat/${conversation.id}`)}
                 >
-                  {conversation.name || "Untitled Chat"}
+                  <span className={`text-ellipsis w-full`}>{conversation.name || "Untitled Chat"}</span>
                 </Button>
               ))}
           </SidebarGroup>
