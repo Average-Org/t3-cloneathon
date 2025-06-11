@@ -1,8 +1,11 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
+import { anthropic } from '@ai-sdk/anthropic';
 import { streamText, createDataStreamResponse } from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
+
+
 
 export async function POST(req: Request) {
   const supabase = await createClient();
