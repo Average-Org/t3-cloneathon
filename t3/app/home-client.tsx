@@ -63,6 +63,11 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
   function insertMessage() {
     const insert = async () => {
+      if (!currentChatId) {
+        await createChat();
+        console.log("Creating new chat...");
+      }
+
       const { data, error } = await supabase.from("messages").insert({
         message: input,
         assistant: false,
@@ -77,7 +82,6 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       handleSubmit(
         {},
         {
-          headers: { Authorization: `Bearer ${await getAccessToken()}` },
           data: { conversationId: currentChatId },
         }
       );
@@ -86,36 +90,34 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     insert();
   }
 
+  const createChat = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("conversations")
+      .insert({ name: "New Chat", user: userData?.user?.id })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating chat:", error);
+      return;
+    }
+
+    if (data) {
+      setChatId(data.id);
+      console.log("New chat created with ID:", data.id);
+    } else {
+      console.error("No chat data returned after creation.");
+    }
+  };
+
   useEffect(() => {
-    const createChat = async () => {
-      if (chatId) {
-        setChatId(chatId);
-        console.log("Using existing chat ID:", chatId);
-        return;
-      }
-
-      const { data: userData } = await supabase.auth.getUser();
-
-      const { data, error } = await supabase
-        .from("conversations")
-        .insert({ name: "New Chat", user: userData?.user?.id })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating chat:", error);
-        return;
-      }
-
-      if (data) {
-        setChatId(data.id);
-        console.log("New chat created with ID:", data.id);
-      } else {
-        console.error("No chat data returned after creation.");
-      }
-    };
-
-    createChat();
+    if (chatId) {
+      setChatId(chatId);
+      console.log("Using existing chat ID:", chatId);
+      return;
+    }
   }, [chatId]);
 
   return (
