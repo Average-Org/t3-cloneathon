@@ -1,26 +1,23 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
 import { streamText, createDataStreamResponse } from "ai";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@/utils/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
 
-  console.log(req);
   const { messages, conversation, model } = await req.json();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  console.log("user in server route ➜", user?.id, error);
 
+  console.log(user?.email + " sent a request to AI route.");
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
-        model: openai(model),
+        model: openai("gpt-4o"),
         messages: [
           {
             role: "system",
