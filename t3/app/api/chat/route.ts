@@ -5,7 +5,15 @@ import { streamText, createDataStreamResponse } from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
-
+function getModel(model: string) {
+    if (model.includes("gpt") || model.includes("openai")) {
+      return openai(model);
+    } else if (model.includes("claude") || model.includes("anthropic")) {
+      return anthropic(model);
+    } else {
+      throw new Error(`Unsupported model: ${model}`);
+    }
+  }
 
 export async function POST(req: Request) {
   const supabase = await createClient();
