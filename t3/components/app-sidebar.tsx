@@ -90,9 +90,9 @@ export function AppSidebar({
           />
           <Heading className={`text-center`}>T3.chat</Heading>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup className={`flex flex-col items-center gap-3`}>
-            <Button className={`font-bold w-[90%] cursor-pointer`}>
+        <SidebarContent className={`overflow-x-hidden`}>
+          <SidebarGroup className={`flex flex-col items-center gap-3 `}>
+            <Button onClick={() => router.push('/')} className={`font-bold w-[90%] cursor-pointer`}>
               New Chat
             </Button>
 
@@ -108,7 +108,7 @@ export function AppSidebar({
               conversations.map((conversation) => (
                 <Button
                   key={conversation.id}
-                  className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
+                  className={`!bg-transparent cursor-pointer text-muted-foreground text-ellipsis overflow-ellipsis !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
                   onClick={() => router.push(`/chat/${conversation.id}`)}
                 >
                   {conversation.name || "Untitled Chat"}
