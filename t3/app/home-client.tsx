@@ -35,6 +35,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const {
     messages,
+    setMessages,
     input,
     handleInputChange,
     handleSubmit,
@@ -90,6 +91,36 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     insert();
   }
 
+  const loadChat = async () => {
+    if (!chatId) {
+      console.error("No chat ID provided to load messages.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation", chatId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error loading chat messages:", error);
+      return;
+    }
+
+    if (data) {
+      setChatId(chatId);
+      setMessages(
+        data.map((message) => ({
+          id: message.id.toString(),
+          role: message.assistant ? "assistant" : "user",
+          content: message.message ?? "",
+        }))
+      );
+      console.log("Chat messages loaded:", data);
+    }
+  };
+
   const createChat = async () => {
     const { data: userData } = await supabase.auth.getUser();
 
@@ -116,6 +147,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     if (chatId) {
       setChatId(chatId);
       console.log("Using existing chat ID:", chatId);
+      loadChat();
       return;
     }
   }, [chatId]);
