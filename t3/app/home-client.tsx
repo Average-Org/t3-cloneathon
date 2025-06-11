@@ -64,6 +64,11 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
   function insertMessage() {
     const insert = async () => {
+      if (!currentChatId) {
+        await createChat();
+        console.log("Creating new chat...");
+      }
+
       const { data, error } = await supabase.from("messages").insert({
         message: input,
         assistant: false,
@@ -79,44 +84,41 @@ export default function HomeClient({ chatId }: HomeClientProps) {
         {},
         {
           headers: { Authorization: `Bearer ${await getAccessToken()}` },
-          data: { conversationId: currentChatId, model: selectedModel },
-        }
+          data: { conversationId: currentChatId, model: selectedModel },    }
       );
     };
 
     insert();
   }
 
+  const createChat = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("conversations")
+      .insert({ name: "New Chat", user: userData?.user?.id })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating chat:", error);
+      return;
+    }
+
+    if (data) {
+      setChatId(data.id);
+      console.log("New chat created with ID:", data.id);
+    } else {
+      console.error("No chat data returned after creation.");
+    }
+  };
+
   useEffect(() => {
-    const createChat = async () => {
-      if (chatId) {
-        setChatId(chatId);
-        console.log("Using existing chat ID:", chatId);
-        return;
-      }
-
-      const { data: userData } = await supabase.auth.getUser();
-
-      const { data, error } = await supabase
-        .from("conversations")
-        .insert({ name: "New Chat", user: userData?.user?.id })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating chat:", error);
-        return;
-      }
-
-      if (data) {
-        setChatId(data.id);
-        console.log("New chat created with ID:", data.id);
-      } else {
-        console.error("No chat data returned after creation.");
-      }
-    };
-
-    createChat();
+    if (chatId) {
+      setChatId(chatId);
+      console.log("Using existing chat ID:", chatId);
+      return;
+    }
   }, [chatId]);
 
   return (
@@ -203,7 +205,6 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                       className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
                     >
                       <XMarkIcon className="h-5 w-5" />{" "}
-                      {/* X button when loading */}
                     </Button>
                   ) : (
                     <Button
@@ -211,7 +212,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                       variant={"outline"}
                       className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
                     >
-                      <ArrowUpIcon /> {/* Send button when not loading */}
+                      <ArrowUpIcon />
                     </Button>
                   )}
                   <div className={`absolute bottom-2 left-3 flex gap-2`}>

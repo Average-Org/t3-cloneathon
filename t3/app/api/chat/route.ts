@@ -14,7 +14,6 @@ function getModel(model: string) {
         model = "gpt-4o";
       }
 
-
     if (model.includes("gpt") || model.includes("openai")) {
       return openai(model);
     } else if (model.includes("claude") || model.includes("anthropic")) {
