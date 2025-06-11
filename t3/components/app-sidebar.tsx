@@ -19,7 +19,11 @@ import { supabase } from "@/lib/supabaseClient";
 import UserProfilePicture from "./ProfilePicture";
 import UserFullName from "./Username";
 import { useTheme } from "next-themes";
-import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import {
+  MoonIcon,
+  PencilSquareIcon,
+  SunIcon,
+} from "@heroicons/react/24/outline";
 import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
 import { Tables } from "@/database.types";
 
@@ -97,11 +101,12 @@ export function AppSidebar({
           <SidebarGroup className={`flex flex-col items-center gap-3 `}>
             <Button
               onClick={() => router.push("/")}
-              className={`font-bold w-[90%] cursor-pointer`}
+              className="font-bold w-[90%] cursor-pointer relative flex items-center justify-center"
             >
-              New Chat
+              <span>New Chat</span>
+              <PencilSquareIcon className="w-5 h-5 absolute right-4" />
             </Button>
-
+            
             <Input
               placeholder={`Search your threads...`}
               icon={<SearchIcon className={`w-4 h-4 text-muted-foreground`} />}
