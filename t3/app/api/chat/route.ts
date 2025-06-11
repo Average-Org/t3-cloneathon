@@ -7,13 +7,18 @@ import { createServerClient } from "@supabase/ssr";
 export async function POST(req: Request) {
   const supabase = await createClient();
 
-  const { messages, conversation, model } = await req.json();
+  const body = await req.json();
+  console.log(body);
+  const { messages, model } = body;
+  const { conversationId: conversation } = body.data;
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
 
-  console.log(user?.email + " sent a request to AI route.");
+  console.log(
+    user?.email + " sent a request to AI route in conversation: " + conversation
+  );
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
