@@ -33,6 +33,7 @@ interface HomeClientProps {
 
 export default function HomeClient({ chatId }: HomeClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const {
     messages,
     setMessages,
@@ -83,8 +84,8 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       handleSubmit(
         {},
         {
-          data: { conversationId: currentChatId },
-        }
+          headers: { Authorization: `Bearer ${await getAccessToken()}` },
+          data: { conversationId: currentChatId, model: selectedModel },    }
       );
     };
 
@@ -236,7 +237,6 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                       className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
                     >
                       <XMarkIcon className="h-5 w-5" />{" "}
-                      {/* X button when loading */}
                     </Button>
                   ) : (
                     <Button
@@ -244,11 +244,11 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                       variant={"outline"}
                       className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
                     >
-                      <ArrowUpIcon /> {/* Send button when not loading */}
+                      <ArrowUpIcon />
                     </Button>
                   )}
                   <div className={`absolute bottom-2 left-3 flex gap-2`}>
-                    <Select>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
                       <SelectTrigger>
                         <BotIcon />
                         <SelectValue placeholder={"Automatic"} />
@@ -257,8 +257,8 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                       <SelectContent>
                         <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
 
-                        <SelectItem value={`claude-3.7-sonnet`}>
-                          Claude 3.7 Sonnet
+                        <SelectItem value={`claude-3-5-sonnet-20241022`}>
+                          Claude 3.5 Sonnet
                         </SelectItem>
                       </SelectContent>
                     </Select>
