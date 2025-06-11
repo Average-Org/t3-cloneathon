@@ -106,7 +106,7 @@ export function AppSidebar({
               <span>New Chat</span>
               <PencilSquareIcon className="w-5 h-5 absolute right-4" />
             </Button>
-            
+
             <Input
               placeholder={`Search your threads...`}
               icon={<SearchIcon className={`w-4 h-4 text-muted-foreground`} />}
@@ -209,7 +209,11 @@ export function AppSidebar({
               className={`rounded-3xl`}
               onClick={toggleTheme}
             >
-              <SunIcon className={`size-6`} />
+              {theme === "light" ? (
+                <MoonIcon className="size-6" />
+              ) : (
+                <SunIcon className="size-6" />
+              )}
             </Button>
 
             <Button variant={"ghost"} className={`rounded-3xl`}>
