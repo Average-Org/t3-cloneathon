@@ -20,6 +20,7 @@ import UserFullName from "./Username";
 import { useTheme } from "next-themes";
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
+import { Tables } from "@/database.types";
 
 
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -32,7 +33,8 @@ export function AppSidebar({ isSidebarOpen, changeSidebarState, children }: AppS
     const { theme, setTheme } = useTheme();
 
     const [loggedIn, setLoggedIn] = useState(false);
-
+    const [conversations, setConversations] = useState<Tables<"conversations">[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const getSession = async () => {
@@ -40,15 +42,23 @@ export function AppSidebar({ isSidebarOpen, changeSidebarState, children }: AppS
             setLoggedIn(!!session?.user);
         };
 
+        const getConversations = async () => {
+            const {data, error} = await supabase.from("conversations").select("*");
+
+            if(!data){
+                throw new Error("Data could not be retrieved.");
+            }
+
+            setConversations(data);
+            console.log(data);
+        }
+
         getSession();
+        getConversations().then(() => {
+            setLoading(false);
+        })
 
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-            setLoggedIn(!!session?.user);
-        });
 
-        return () => {
-            listener.subscription.unsubscribe();
-        };
     }, []);
 
     function toggleSidebar() {
@@ -83,7 +93,18 @@ export function AppSidebar({ isSidebarOpen, changeSidebarState, children }: AppS
                             inputClassName={`border-0 !bg-transparent !rounded-b-none !border-b-2 focus:!ring-0`}>
                         </Input>
                     </SidebarGroup>
-                    <SidebarGroup />
+                    <SidebarGroup>
+                        {
+                            !loading && conversations.map((conversation) => (
+                                <Button
+                                    key={conversation.id}
+                                    className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
+                                    onClick={() => router.push(`/chat/${conversation.id}`)}>
+                                    {conversation.name || "Untitled Chat"}
+                                </Button>
+                            ))
+                        }
+                    </SidebarGroup>
                 </SidebarContent>
                 <SidebarFooter>
                     {!loggedIn && (
