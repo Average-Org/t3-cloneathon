@@ -33,6 +33,7 @@ interface HomeClientProps {
 
 export default function HomeClient({ chatId }: HomeClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const {
     messages,
     input,
@@ -78,7 +79,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
         {},
         {
           headers: { Authorization: `Bearer ${await getAccessToken()}` },
-          data: { conversationId: currentChatId },
+          data: { conversationId: currentChatId, model: selectedModel },
         }
       );
     };
@@ -214,7 +215,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                     </Button>
                   )}
                   <div className={`absolute bottom-2 left-3 flex gap-2`}>
-                    <Select>
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
                       <SelectTrigger>
                         <BotIcon />
                         <SelectValue placeholder={"Automatic"} />
@@ -223,8 +224,8 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                       <SelectContent>
                         <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
 
-                        <SelectItem value={`claude-3.7-sonnet`}>
-                          Claude 3.7 Sonnet
+                        <SelectItem value={`claude-3-5-sonnet-20241022`}>
+                          Claude 3.5 Sonnet
                         </SelectItem>
                       </SelectContent>
                     </Select>

@@ -5,14 +5,24 @@ import { streamText, createDataStreamResponse } from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
+
+
+
 function getModel(model: string) {
+    if (!model) {
+        console.warn("Model not specified, defaulting to gpt-4o");
+        model = "gpt-4o";
+      }
+
+
     if (model.includes("gpt") || model.includes("openai")) {
       return openai(model);
     } else if (model.includes("claude") || model.includes("anthropic")) {
       return anthropic(model);
     } else {
-      throw new Error(`Unsupported model: ${model}`);
-    }
+        throw new Error(`Unsupported model: ${model}`);
+    } 
+   
   }
 
 export async function POST(req: Request) {
@@ -20,8 +30,8 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   console.log(body);
-  const { messages, model } = body;
-  const { conversationId: conversation } = body.data;
+  const { messages, data } = body;
+  const { conversationId: conversation, model } = data;
   const {
     data: { user },
     error,
@@ -33,7 +43,7 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
-        model: openai("gpt-4o"),
+        model: getModel(model),
         messages: [
           {
             role: "system",
