@@ -117,7 +117,9 @@ export function AppSidebar({
                   className={`!bg-transparent cursor-pointer text-muted-foreground whitespace-nowrap !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
                   onClick={() => router.push(`/chat/${conversation.id}`)}
                 >
-                  <span className={`text-ellipsis w-full`}>{conversation.name || "Untitled Chat"}</span>
+                  <span className="truncate block max-w-full text-left flex-shrink">
+                    {conversation.name || "Untitled Chat"}
+                  </span>{" "}
                 </Button>
               ))}
           </SidebarGroup>
