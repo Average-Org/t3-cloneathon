@@ -1,20 +1,22 @@
-// app/page.tsx or app/home/page.tsx
-
 "use client"
 
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabaseClient"
+import { useCallback } from "react"
 
 export default function Home() {
-  const handleLogin = async () => {
+  const loginWithGithub = useCallback(async() => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "github",
+      options: {
+        redirectTo: `${location.origin}/login/callback`,
+      }
     })
 
     if (error) {
       console.error("Github login error:", error.message)
     }
-  }
+  }, []);
 
   return (
     <main>
@@ -25,7 +27,7 @@ export default function Home() {
             variant="default"
             size="xlg"
             className="font-bold text-lg"
-            onClick={handleLogin}
+            onClick={loginWithGithub}
           >
             Continue with Github
           </Button>

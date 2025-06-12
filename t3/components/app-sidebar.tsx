@@ -116,8 +116,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
   useEffect(() => {
     router.prefetch("/chat/new");
-    conversations.forEach((c) => router.prefetch(`/chat/${c.id}`));
-  }, [conversations]);
+  }, []);
 
   function toggleSidebar() {
     changeSidebarState((prev) => !prev);

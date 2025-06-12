@@ -27,6 +27,7 @@ import { Tables } from "@/database.types";
 import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useConversation } from "@/hooks/use-conversation";
+import { useRouter } from "next/navigation";
 
 interface HomeClientProps {
   chatId?: string;
@@ -47,9 +48,12 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     api: "/api/chat",
     credentials: "include",
   });
+  const router = useRouter();
   const { setTitle, setCurrentConversationId } = useSidebar();
   const user = useCurrentUser();
-  const conversation = useConversation(chatId);
+  const [chatIdFromUrl, setChatIdFromUrl] = useState<string | null | undefined>(
+    chatId
+  );
 
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
@@ -57,6 +61,28 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       insertMessage();
     }
   }
+
+  const conversation = useConversation(chatIdFromUrl);
+
+  useEffect(() => {
+    if (chatIdFromUrl === "new") {
+      setChatIdFromUrl(null);
+    }
+
+    if (!user.user && !user.isLoading) {
+      router.push("/login");
+    }
+
+    if (chatIdFromUrl !== conversation.chat?.id && !conversation.loading) {
+      if (chatIdFromUrl) {
+        conversation.loadChat(chatIdFromUrl);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    setMessages(conversation.messages);
+  }, [conversation.loading]);
 
   const insertMessage = useCallback(async () => {
     const id = conversation.chat?.id;
@@ -97,7 +123,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
         {messages.length > 0 && (
           <div
-            className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto`}
+            className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto transition-all duration-500`}
           >
             {error && (
               <div className={`flex justify-center items-center max-w-[80%]`}>

@@ -4,17 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "./use-current-user";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Tables } from "@/database.types";
+import { Message, UIMessage } from "ai";
 
 export function useConversation(chatIdProp?: string | null) {
   const [chat, setChat] = useState<Tables<"conversations"> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [messages, setMessages] = useState<
-    { id: string; role: "user" | "assistant"; content: string }[]
-  >([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const user = useCurrentUser();
   const sidebar = useSidebar();
 
   const createChat = useCallback(async () => {
+    if (user.isLoading || !user.user) return null;
+
     const { data, error } = await supabase
       .from("conversations")
       .insert({ name: "New Chat", user: user?.user?.id })
@@ -43,15 +44,7 @@ export function useConversation(chatIdProp?: string | null) {
       let chatIdToUse = chatId;
 
       if (!chatIdToUse) {
-        const newChat = await createChat();
-        setChat(newChat);
-        chatIdToUse = newChat.id;
-
-        if (!chatIdToUse) {
-          console.error("Failed to create a new chat.");
-        }
-
-        return;
+        throw new Error("Invalid chat");
       }
 
       const conversation = await supabase
@@ -87,11 +80,13 @@ export function useConversation(chatIdProp?: string | null) {
       }
 
       if (data) {
+        console.log(data);
         setMessages(
-          data.map((message) => ({
-            id: message.id.toString(),
-            role: message.assistant ? "assistant" : "user",
-            content: message.message ?? "",
+          data.map((msg) => ({
+            id: msg.id.toString(),
+            role: msg.assistant ? "assistant" : "user",
+            content: msg.message ?? "",
+            parts: [{ type: "text", text: msg.message ?? "" }],
           }))
         );
 
@@ -136,12 +131,22 @@ export function useConversation(chatIdProp?: string | null) {
 
       try {
         // if they passed in an ID, load that, otherwise, only create once if we don't already have a chat
-        const convo = chatIdProp
-          ? await loadChat(chatIdProp)
-          : chat ?? (await createChat());
+        let convo: string | undefined;
+        if (chatIdProp === "new" || !chatIdProp) {
+          convo = (await createChat())?.id;
+
+          if (!convo) {
+            console.warn(
+              "User was not logged in and attempted to create chat."
+            );
+            return;
+          }
+          cleanupFn = subscribeToNameChanges(convo);
+        } else {
+          await loadChat(chatIdProp);
+        }
 
         // subscribe once for name‐changes
-        cleanupFn = subscribeToNameChanges(convo?.id);
       } catch (err) {
         console.error("Conversation init error:", err);
       } finally {
@@ -154,7 +159,7 @@ export function useConversation(chatIdProp?: string | null) {
     return () => {
       if (cleanupFn) cleanupFn();
     };
-  }, [chatIdProp]); // ← no chat?.id, no createChat, no loadChat, no subscribeToNameChanges
+  }, [chatIdProp]);
 
   return {
     chat,
