@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useEffect, useState } from "react";
 import { Heading } from "@/components/heading";
@@ -27,6 +27,7 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { title } from "process";
 import { set } from "zod";
+import { Tables } from "@/database.types";
 import UserFullName from "@/components/Username";
 
 interface HomeClientProps {
@@ -48,8 +49,9 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     api: "/api/chat",
     credentials: "include",
   });
-  const [currentChatId, setChatId] = useState<string | null>(chatId || null);
-
+  const [currentChatId, setChatId] = useState<string | null>(null);
+  const [currentChatName, setChatName] = useState<string | null>(null);
+  const { open } = useSidebar();
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -109,6 +111,8 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       .select()
       .single();
 
+    setChatName("New Chat");
+
     if (error) {
       console.error("Error creating chat:", error);
       throw new Error("Failed to create chat.", error);
@@ -116,6 +120,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
     if (data) {
       setChatId(data.id);
+      subscribeToNameChanges(data.id);
       console.log("New chat created with ID:", data.id);
     } else {
       console.error("No chat data returned after creation.");
@@ -124,11 +129,36 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     return data.id;
   };
 
+  const subscribeToNameChanges = (chatId: string) => {
+    const channelName = `conversation-name-changes-${chatId}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+          filter: `id=eq.${chatId}`,
+        },
+        (payload) => {
+          const conversation = payload.new as Tables<"conversations">;
+          setChatName(conversation.name);
+          console.log("Chat name updated:", conversation.name);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
   const loadChat = async () => {
-    let chatIdToUse = currentChatId;
+    let chatIdToUse = chatId;
 
     if (!chatIdToUse) {
-      console.error("No chat ID provided to load messages.");
       chatIdToUse = await createChat();
       setChatId(chatIdToUse);
 
@@ -158,21 +188,36 @@ export default function HomeClient({ chatId }: HomeClientProps) {
           content: message.message ?? "",
         }))
       );
+
+      const conversation = await supabase
+        .from("conversations")
+        .select("name")
+        .eq("id", chatIdToUse)
+        .single();
+
+      if (conversation.error) {
+        console.error("Error fetching conversation name:", conversation.error);
+      }
+
+      setChatName(conversation.data?.name ?? "New Chat");
+      console.log("Chat name set to:", conversation.data?.name ?? "New Chat");
+
       console.log("Chat messages loaded:", data);
     }
   };
 
   useEffect(() => {
-    if (chatId) {
+    if (!chatId) return;
+
+    console.log(`${chatId}, ${currentChatId}`);
+    if (chatId !== currentChatId) {
       setChatId(chatId);
-      console.log("Using existing chat ID:", chatId);
       loadChat();
-      return;
     }
   }, [chatId]);
 
   return (
-    <div className={`flex h-full w-full`}>
+    <div className={`flex h-full w-full flex-col`}>
       <div className={`flex flex-col grow justify-between h-full`}>
         {messages.length < 1 && (
           <div className={`flex justify-center items-center grow`}>

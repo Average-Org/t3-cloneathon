@@ -119,7 +119,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
   const router = useRouter();
 
   function newChat() {
-      router.push("/chat/new");
+    router.push("/chat/new");
   }
 
   return (
@@ -196,7 +196,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
       <div className={`content-wrapper flex flex-col grow`}>
         {!isSidebarOpen && (
-          <div className={`absolute p-1 bg-accent h-fit rounded-xl m-2`}>
+          <div className={`absolute p-2 bg-accent h-fit rounded-xl mt-3 ml-2`}>
             <SidebarTrigger onClick={toggleSidebar} />
           </div>
         )}
@@ -239,7 +239,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
         {!isSidebarOpen && (
           <div
-            className={`absolute right-0 p-1 bg-accent h-fit rounded-xl m-2`}
+            className={`absolute right-0 p-1 bg-accent h-fit rounded-xl mt-3 mr-2`}
           >
             <Button
               variant={"ghost"}
