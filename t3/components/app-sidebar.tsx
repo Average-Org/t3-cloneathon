@@ -185,7 +185,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
               </div>
               <div className="flex flex-col">
                 <div className="text-sm text-foreground font-medium">
-                  <UserFullName />
+                 <UserFullName/>
                 </div>
                 <span className="text-xs text-muted-foreground">Free</span>
               </div>

@@ -27,6 +27,7 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { title } from "process";
 import { set } from "zod";
+import UserFullName from "@/components/Username";
 
 interface HomeClientProps {
   chatId?: string;
@@ -175,7 +176,9 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       <div className={`flex flex-col grow justify-between h-full`}>
         {messages.length < 1 && (
           <div className={`flex justify-center items-center grow`}>
-            <Heading className={`text-3xl`}>How can I help you?</Heading>
+            <Heading className={`text-3xl`}>How can I help you,&nbsp;</Heading>
+            <UserFullName className="text-3xl font-bold"/>
+            <h1 className="text-3xl font-bold">!</h1>
           </div>
         )}
 
