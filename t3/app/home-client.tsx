@@ -67,6 +67,12 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   useEffect(() => {
     if (chatIdFromUrl === "new") {
       setChatIdFromUrl(null);
+
+      if(!conversation.loading){
+        conversation.createChat().then((chat) => {
+          setChatIdFromUrl(chat?.id);
+        })
+      }
     }
 
     if (!user.user && !user.isLoading) {
@@ -85,11 +91,11 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   }, [conversation.loading]);
 
   const insertMessage = useCallback(async () => {
-    const id = conversation.chat?.id;
+    let id = conversation.chat?.id;
 
     if (!id) {
-      console.error("Failed to create a new chat.");
-      return;
+      const chat = await conversation.createChat();
+      id = chat?.id;
     }
 
     const { error } = await supabase.from("messages").insert({
