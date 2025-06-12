@@ -42,7 +42,9 @@ type SidebarContextProps = {
   isMobile: boolean,
   title: string | undefined,
   setTitle: (title: string | undefined) => void,
-  toggleSidebar: () => void
+  toggleSidebar: () => void,
+  currentConversationId: string | undefined,
+  setCurrentConversationId: (id: string | undefined) => void,
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -72,6 +74,7 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
   const [title, setTitle] = React.useState<string | undefined>(undefined)
+  const [currentConversationId, setCurrentConversationId] = React.useState<string | undefined>(undefined)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -128,8 +131,10 @@ function SidebarProvider({
       toggleSidebar,
       title,
       setTitle,
+      currentConversationId,
+      setCurrentConversationId,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, title, setTitle]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, title, setTitle, currentConversationId, setCurrentConversationId]
   )
 
   return (

@@ -40,7 +40,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
     []
   );
   const [loading, setLoading] = useState(true);
-  const { title, setTitle } = useSidebar();
+  const { title, setTitle, currentConversationId } = useSidebar();
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -158,7 +158,8 @@ export function AppSidebar({ children }: AppSidebarProps) {
               conversations.map((conversation) => (
                 <Button
                   key={conversation.id}
-                  className={`!bg-transparent cursor-pointer text-muted-foreground whitespace-nowrap !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
+                  className={`!bg-transparent cursor-pointer text-muted-foreground whitespace-nowrap !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full
+                    ${currentConversationId === conversation.id ? "!bg-muted-foreground/30 text-foreground" : ""}`}
                   onClick={() => router.push(`/chat/${conversation.id}`)}
                 >
                   <span className="truncate block max-w-full text-left flex-shrink">

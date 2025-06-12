@@ -50,7 +50,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     credentials: "include",
   });
   const [currentChatId, setChatId] = useState<string | null>(null);
-  const {setTitle} = useSidebar();
+  const {setTitle, setCurrentConversationId} = useSidebar();
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -119,6 +119,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
     if (data) {
       setChatId(data.id);
+      setCurrentConversationId(data.id);
       subscribeToNameChanges(data.id);
       console.log("New chat created with ID:", data.id);
     } else {
@@ -214,6 +215,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
     console.log(`${chatId}, ${currentChatId}`);
     if (chatId !== currentChatId) {
+      setCurrentConversationId(chatId);
       setChatId(chatId);
       loadChat();
     }
