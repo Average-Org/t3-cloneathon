@@ -29,17 +29,11 @@ import { Tables } from "@/database.types";
 
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   componentProps?: React.ComponentProps<"div">;
-  isSidebarOpen: boolean;
-  changeSidebarState: (value: boolean) => void;
 }
 
-export function AppSidebar({
-  isSidebarOpen,
-  changeSidebarState,
-  children,
-}: AppSidebarProps) {
+export function AppSidebar({ children }: AppSidebarProps) {
   const { theme, setTheme } = useTheme();
-
+  const [isSidebarOpen, changeSidebarState] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [conversations, setConversations] = useState<Tables<"conversations">[]>(
     []
@@ -47,11 +41,44 @@ export function AppSidebar({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     const getSession = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       setLoggedIn(!!session?.user);
+    };
+
+    const subscribeToChanges = () => {
+      channel = supabase
+        .channel("table-db-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "conversations",
+          },
+          (payload) => {
+            setConversations((prev) => {
+              const newRow = payload.new as Tables<"conversations">;
+              const oldRow = payload.old as Tables<"conversations">;
+
+              if (payload.eventType === "DELETE") {
+                return prev.filter((conv) => conv.id !== oldRow.id);
+              } else if (payload.eventType === "INSERT") {
+                return [newRow, ...prev];
+              } else if (payload.eventType === "UPDATE") {
+                return prev.map((conv) =>
+                  conv.id === newRow.id ? newRow : conv
+                );
+              }
+              return prev;
+            });
+          }
+        )
+        .subscribe();
     };
 
     const getConversations = async () => {
@@ -60,19 +87,25 @@ export function AppSidebar({
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (!data) {
-        throw new Error("Data could not be retrieved.");
-      }
+      if (!data) throw new Error("Data could not be retrieved.");
 
       setConversations(data);
-      console.log(data);
+      setLoading(false);
     };
 
-    getSession().then(() => {
-      getConversations().then(() => {
-        setLoading(false);
-      });
-    });
+    const initialize = async () => {
+      await getSession();
+      await getConversations();
+      subscribeToChanges();
+    };
+
+    initialize();
+
+    return () => {
+      if (channel) {
+        channel.unsubscribe();
+      }
+    };
   }, []);
 
   function toggleSidebar() {
