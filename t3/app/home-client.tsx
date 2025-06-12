@@ -50,8 +50,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     credentials: "include",
   });
   const [currentChatId, setChatId] = useState<string | null>(null);
-  const [currentChatName, setChatName] = useState<string | null>(null);
-  const { open } = useSidebar();
+  const {setTitle} = useSidebar();
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -111,7 +110,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       .select()
       .single();
 
-    setChatName("New Chat");
+    setTitle("New Chat");
 
     if (error) {
       console.error("Error creating chat:", error);
@@ -144,7 +143,11 @@ export default function HomeClient({ chatId }: HomeClientProps) {
         },
         (payload) => {
           const conversation = payload.new as Tables<"conversations">;
-          setChatName(conversation.name);
+          if (!conversation.name) {
+            console.error("No conversation data received in payload.");
+            return;
+          }
+          setTitle(conversation.name);
           console.log("Chat name updated:", conversation.name);
         }
       )
@@ -199,7 +202,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
         console.error("Error fetching conversation name:", conversation.error);
       }
 
-      setChatName(conversation.data?.name ?? "New Chat");
+      setTitle(conversation.data?.name ?? "New Chat");
       console.log("Chat name set to:", conversation.data?.name ?? "New Chat");
 
       console.log("Chat messages loaded:", data);
@@ -217,7 +220,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   }, [chatId]);
 
   return (
-    <div className={`flex h-full w-full flex-col`}>
+    <div className={`flex h-full w-full flex-col max-h-[calc(100vh-5rem)]`}>
       <div className={`flex flex-col grow justify-between h-full`}>
         {messages.length < 1 && (
           <div className={`flex justify-center items-center grow`}>
@@ -229,7 +232,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
         {messages.length > 0 && (
           <div
-            className={`flex flex-col mt-16 items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto`}
+            className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto`}
           >
             {error && (
               <div className={`flex justify-center items-center max-w-[80%]`}>

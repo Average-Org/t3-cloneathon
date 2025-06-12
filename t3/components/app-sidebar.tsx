@@ -7,6 +7,7 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Heading } from "@/components/heading";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
     []
   );
   const [loading, setLoading] = useState(true);
+  const { title, setTitle } = useSidebar();
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -185,7 +187,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
               </div>
               <div className="flex flex-col">
                 <div className="text-sm text-foreground font-medium">
-                 <UserFullName/>
+                  <UserFullName />
                 </div>
                 <span className="text-xs text-muted-foreground">Free</span>
               </div>
@@ -196,13 +198,17 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
       <div className={`content-wrapper flex flex-col grow`}>
         {!isSidebarOpen && (
-          <div className={`absolute p-2 bg-accent h-fit rounded-xl mt-3 ml-2`}>
+          <div className={`absolute p-2 bg-accent h-fit rounded-xl mt-4 ml-3`}>
             <SidebarTrigger onClick={toggleSidebar} />
           </div>
         )}
 
         {!isSidebarOpen && (
-          <div className={`bg-background grow border`}>{children}</div>
+          <div className={`bg-background grow border`}>
+              <div className={`flex items-center w-full p-5 ${title ? "border-b" : ""}`}>
+                <Heading className={`text-foreground/75 text-3xl ml-12 ${!title ? 'opacity-0' : ''}`}>{title || 'Placeholder' }</Heading>
+              </div>
+            {children}</div>
         )}
 
         {isSidebarOpen && (
@@ -232,6 +238,9 @@ export function AppSidebar({ children }: AppSidebarProps) {
             </div>
 
             <div className={`bg-background grow rounded-tl-xl border`}>
+              <div className={`flex items-center w-full p-3 ${title ? "border-b" : ""}`}>
+                <Heading className={`text-foreground/75 text-3xl ml-4 ${!title ? 'opacity-0' : ''}`}>{title || 'Placeholder' }</Heading>
+              </div>
               {children}
             </div>
           </div>
@@ -239,7 +248,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
         {!isSidebarOpen && (
           <div
-            className={`absolute right-0 p-1 bg-accent h-fit rounded-xl mt-3 mr-2`}
+            className={`absolute right-0 p-1 bg-accent h-fit rounded-xl mt-4 mr-3`}
           >
             <Button
               variant={"ghost"}
