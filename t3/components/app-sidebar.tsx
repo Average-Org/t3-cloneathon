@@ -118,6 +118,10 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
   const router = useRouter();
 
+  function newChat() {
+      router.push("/chat/new");
+  }
+
   return (
     <div className={`flex flex-row w-full`}>
       <Sidebar className={`!border-r-0`}>
@@ -133,7 +137,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
         <SidebarContent className={`overflow-x-hidden`}>
           <SidebarGroup className={`flex flex-col items-center gap-3 `}>
             <Button
-              onClick={() => router.push("/")}
+              onClick={newChat}
               className="font-bold w-[90%] cursor-pointer relative flex items-center justify-center"
             >
               <span>New Chat</span>
