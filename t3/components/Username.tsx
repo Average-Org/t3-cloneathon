@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function UserFullName() {
+type UserFullNameProps = {
+  className?: string;
+};
+
+export default function UserFullName({ className }: UserFullNameProps) {
   const [fullName, setFullName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,5 +33,5 @@ export default function UserFullName() {
 
   if (!fullName) return <div>No full name</div>;
 
-  return <h3>{fullName}</h3>
+  return <h3 className={className}>{fullName}</h3>
 }
