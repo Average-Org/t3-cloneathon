@@ -26,8 +26,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { Tables } from "@/database.types";
 import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useConversation } from "@/hooks/use-conversation";
 import { useRouter } from "next/navigation";
+import { useConversationCtx } from "@/lib/conversation-context";
 
 interface HomeClientProps {
   chatId?: string;
@@ -62,7 +62,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     }
   }
 
-  const conversation = useConversation(chatIdFromUrl);
+  const conversation = useConversationCtx();
 
   useEffect(() => {
     if (chatIdFromUrl === "new") {

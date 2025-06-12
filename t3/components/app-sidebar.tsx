@@ -29,7 +29,7 @@ import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHo
 import { Tables } from "@/database.types";
 import { ConversationItem } from "./sidebar/conversation-item";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useConversation } from "@/hooks/use-conversation";
+import { useConversationCtx } from "@/lib/conversation-context";
 
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   componentProps?: React.ComponentProps<"div">;
@@ -42,7 +42,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
     { id: string; name: string | null }[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const conversation = useConversation();
+  const conversation = useConversationCtx();
   const { title, setTitle } = useSidebar();
   const user = useCurrentUser();
 
@@ -57,7 +57,6 @@ export function AppSidebar({ children }: AppSidebarProps) {
           event: "*",
           schema: "public",
           table: "conversations",
-          // Use the user id from the session instead of supabase.auth.user()
           filter: `user=eq.${user.user?.id}`,
         },
         (payload) => {
