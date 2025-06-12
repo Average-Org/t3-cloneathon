@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { LogInIcon, SearchIcon } from "lucide-react";
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import UserProfilePicture from "./ProfilePicture";
 import UserFullName from "./Username";
@@ -27,6 +27,9 @@ import {
 } from "@heroicons/react/24/outline";
 import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
 import { Tables } from "@/database.types";
+import { ConversationItem } from "./sidebar/conversation-item";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useConversation } from "@/hooks/use-conversation";
 
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   componentProps?: React.ComponentProps<"div">;
@@ -35,24 +38,18 @@ export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 export function AppSidebar({ children }: AppSidebarProps) {
   const { theme, setTheme } = useTheme();
   const [isSidebarOpen, changeSidebarState] = useState(true);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [conversations, setConversations] = useState<Tables<"conversations">[]>(
-    []
-  );
+  const [conversations, setConversations] = useState<
+    { id: string; name: string | null }[]
+  >([]);
   const [loading, setLoading] = useState(true);
-  const { title, setTitle, currentConversationId } = useSidebar();
+  const conversation = useConversation();
+  const { title, setTitle } = useSidebar();
+  const user = useCurrentUser();
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setLoggedIn(!!session?.user);
-    };
-
-    const subscribeToChanges = () => {
+    const subscribeToChanges = async () => {
       channel = supabase
         .channel("table-db-changes")
         .on(
@@ -61,19 +58,27 @@ export function AppSidebar({ children }: AppSidebarProps) {
             event: "*",
             schema: "public",
             table: "conversations",
+            // Use the user id from the session instead of supabase.auth.user()
+            filter: `user_id=eq.${user.user?.id}`,
           },
           (payload) => {
             setConversations((prev) => {
               const newRow = payload.new as Tables<"conversations">;
               const oldRow = payload.old as Tables<"conversations">;
 
+              // Helper to normalize conversation object
+              const normalize = (row: any) => ({
+                id: row.id,
+                name: row.name ?? "Untitled Chat",
+              });
+
               if (payload.eventType === "DELETE") {
                 return prev.filter((conv) => conv.id !== oldRow.id);
               } else if (payload.eventType === "INSERT") {
-                return [newRow, ...prev];
+                return [normalize(newRow), ...prev];
               } else if (payload.eventType === "UPDATE") {
                 return prev.map((conv) =>
-                  conv.id === newRow.id ? newRow : conv
+                  conv.id === newRow.id ? normalize(newRow) : conv
                 );
               }
               return prev;
@@ -86,7 +91,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
     const getConversations = async () => {
       const { data, error } = await supabase
         .from("conversations")
-        .select("*")
+        .select("id,name")
         .order("created_at", { ascending: false });
 
       if (!data) throw new Error("Data could not be retrieved.");
@@ -96,7 +101,6 @@ export function AppSidebar({ children }: AppSidebarProps) {
     };
 
     const initialize = async () => {
-      await getSession();
       await getConversations();
       subscribeToChanges();
     };
@@ -110,8 +114,13 @@ export function AppSidebar({ children }: AppSidebarProps) {
     };
   }, []);
 
+  useEffect(() => {
+    router.prefetch("/chat/new");
+    conversations.forEach((c) => router.prefetch(`/chat/${c.id}`));
+  }, [conversations]);
+
   function toggleSidebar() {
-    changeSidebarState(!isSidebarOpen);
+    changeSidebarState((prev) => !prev);
   }
 
   function toggleTheme() {
@@ -120,9 +129,16 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
   const router = useRouter();
 
-  function newChat() {
-    router.push("/chat/new");
-  }
+  const newChat = React.useCallback(() => {
+    startTransition(() => router.push("/chat/new"));
+  }, [router]);
+
+  const goToChat = React.useCallback(
+    (id: string) => {
+      startTransition(() => router.push(`/chat/${id}`));
+    },
+    [router]
+  );
 
   return (
     <div className={`flex flex-row w-full`}>
@@ -155,22 +171,19 @@ export function AppSidebar({ children }: AppSidebarProps) {
           </SidebarGroup>
           <SidebarGroup>
             {!loading &&
-              conversations.map((conversation) => (
-                <Button
-                  key={conversation.id}
-                  className={`!bg-transparent cursor-pointer text-muted-foreground whitespace-nowrap !px-4 !py-2 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full
-                    ${currentConversationId === conversation.id ? "!bg-muted-foreground/30 text-foreground" : ""}`}
-                  onClick={() => router.push(`/chat/${conversation.id}`)}
-                >
-                  <span className="truncate block max-w-full text-left flex-shrink">
-                    {conversation.name || "Untitled Chat"}
-                  </span>{" "}
-                </Button>
+              conversations.map((c) => (
+                <ConversationItem
+                  key={c.id}
+                  id={c.id}
+                  name={c.name ?? "Untitled Chat"}
+                  active={conversation.chat?.id === c.id}
+                  onClick={goToChat}
+                />
               ))}
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          {!loggedIn && (
+          {!user.user && (
             <Button
               className={`!bg-transparent cursor-pointer text-muted-foreground !px-4 !py-10 text-md transition-all hover:!bg-muted-foreground/30 justify-start hover:text-foreground w-full`}
               onClick={() => router.push("/login")}
@@ -181,7 +194,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
               </div>
             </Button>
           )}
-          {loggedIn && (
+          { user.user && (
             <div className="flex items-center gap-3 bg-background/50 p-3 rounded-xl">
               <div className="w-10 h-10 flex justify-center items-center rounded-full overflow-hidden">
                 <UserProfilePicture />
@@ -206,10 +219,21 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
         {!isSidebarOpen && (
           <div className={`bg-background grow border`}>
-              <div className={`flex items-center w-full p-5 ${title ? "border-b" : ""}`}>
-                <Heading className={`text-foreground/75 text-3xl ml-12 ${!title ? 'opacity-0' : ''}`}>{title || 'Placeholder' }</Heading>
-              </div>
-            {children}</div>
+            <div
+              className={`flex items-center w-full p-5 ${
+                title ? "border-b" : ""
+              }`}
+            >
+              <Heading
+                className={`text-foreground/75 text-3xl ml-12 ${
+                  !title ? "opacity-0" : ""
+                }`}
+              >
+                {title || "Placeholder"}
+              </Heading>
+            </div>
+            {children}
+          </div>
         )}
 
         {isSidebarOpen && (
@@ -239,8 +263,18 @@ export function AppSidebar({ children }: AppSidebarProps) {
             </div>
 
             <div className={`bg-background grow rounded-tl-xl border`}>
-              <div className={`flex items-center w-full p-3 ${title ? "border-b" : ""}`}>
-                <Heading className={`text-foreground/75 text-3xl ml-4 ${!title ? 'opacity-0' : ''}`}>{title || 'Placeholder' }</Heading>
+              <div
+                className={`flex items-center w-full p-3 ${
+                  title ? "border-b" : ""
+                }`}
+              >
+                <Heading
+                  className={`text-foreground/75 text-3xl ml-4 ${
+                    !title ? "opacity-0" : ""
+                  }`}
+                >
+                  {title || "Placeholder"}
+                </Heading>
               </div>
               {children}
             </div>

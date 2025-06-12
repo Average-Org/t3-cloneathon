@@ -1,8 +1,7 @@
 ﻿"use client";
 
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { useEffect, useState } from "react";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useCallback, useEffect, useState } from "react";
 import { Heading } from "@/components/heading";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -23,12 +22,11 @@ import { AlertCircleIcon, BotIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Markdown from "@/utils/markdown";
-import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { title } from "process";
-import { set } from "zod";
 import { Tables } from "@/database.types";
 import UserFullName from "@/components/Username";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useConversation } from "@/hooks/use-conversation";
 
 interface HomeClientProps {
   chatId?: string;
@@ -49,8 +47,10 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     api: "/api/chat",
     credentials: "include",
   });
-  const [currentChatId, setChatId] = useState<string | null>(null);
-  const {setTitle, setCurrentConversationId} = useSidebar();
+  const { setTitle, setCurrentConversationId } = useSidebar();
+  const user = useCurrentUser();
+  const conversation = useConversation(chatId);
+
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -58,176 +58,39 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     }
   }
 
-  async function getAccessToken() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token ?? "";
-  }
+  const insertMessage = useCallback(async () => {
+    const id = conversation.chat?.id;
 
-  function insertMessage() {
-    const insert = async () => {
-      let chatIdToUse = currentChatId;
-      if (!chatIdToUse) {
-        chatIdToUse = await createChat();
-        console.log("Creating new chat...");
-
-        if (!chatIdToUse) {
-          console.error("Failed to create a new chat.");
-          return;
-        }
-      }
-
-      const { data, error } = await supabase.from("messages").insert({
-        message: input,
-        assistant: false,
-        conversation: chatIdToUse,
-      });
-
-      if (error) {
-        console.error("Error inserting message:", error);
-        return;
-      }
-
-      handleSubmit(
-        {},
-        {
-          headers: { Authorization: `Bearer ${await getAccessToken()}` },
-          data: { conversationId: chatIdToUse, model: selectedModel },
-        }
-      );
-    };
-
-    insert();
-  }
-
-  const createChat = async (): Promise<string> => {
-    const { data: userData } = await supabase.auth.getUser();
-
-    const { data, error } = await supabase
-      .from("conversations")
-      .insert({ name: "New Chat", user: userData?.user?.id })
-      .select()
-      .single();
-
-    setTitle("New Chat");
-
-    if (error) {
-      console.error("Error creating chat:", error);
-      throw new Error("Failed to create chat.", error);
-    }
-
-    if (data) {
-      setChatId(data.id);
-      setCurrentConversationId(data.id);
-      subscribeToNameChanges(data.id);
-      console.log("New chat created with ID:", data.id);
-    } else {
-      console.error("No chat data returned after creation.");
-    }
-
-    return data.id;
-  };
-
-  const subscribeToNameChanges = (chatId: string) => {
-    const channelName = `conversation-name-changes-${chatId}`;
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "conversations",
-          filter: `id=eq.${chatId}`,
-        },
-        (payload) => {
-          const conversation = payload.new as Tables<"conversations">;
-          if (!conversation.name) {
-            console.error("No conversation data received in payload.");
-            return;
-          }
-          setTitle(conversation.name);
-          console.log("Chat name updated:", conversation.name);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const loadChat = async () => {
-    let chatIdToUse = chatId;
-
-    if (!chatIdToUse) {
-      chatIdToUse = await createChat();
-      setChatId(chatIdToUse);
-
-      if (!chatIdToUse) {
-        console.error("Failed to create a new chat.");
-        return;
-      }
-    }
-
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("conversation", chatIdToUse)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error loading chat messages:", error);
+    if (!id) {
+      console.error("Failed to create a new chat.");
       return;
     }
 
-    if (data) {
-      setChatId(chatIdToUse);
-      setMessages(
-        data.map((message) => ({
-          id: message.id.toString(),
-          role: message.assistant ? "assistant" : "user",
-          content: message.message ?? "",
-        }))
-      );
+    const { error } = await supabase.from("messages").insert({
+      message: input,
+      assistant: false,
+      conversation: id,
+    });
 
-      const conversation = await supabase
-        .from("conversations")
-        .select("name")
-        .eq("id", chatIdToUse)
-        .single();
-
-      if (conversation.error) {
-        console.error("Error fetching conversation name:", conversation.error);
-      }
-
-      setTitle(conversation.data?.name ?? "New Chat");
-      console.log("Chat name set to:", conversation.data?.name ?? "New Chat");
-
-      console.log("Chat messages loaded:", data);
+    if (error) {
+      console.error("Error inserting message:", error);
+      return;
     }
-  };
 
-  useEffect(() => {
-    if (!chatId) return;
-
-    console.log(`${chatId}, ${currentChatId}`);
-    if (chatId !== currentChatId) {
-      setCurrentConversationId(chatId);
-      setChatId(chatId);
-      loadChat();
-    }
-  }, [chatId]);
+    handleSubmit({}, { data: { conversationId: id, model: selectedModel } });
+  }, [conversation.chat?.id, input, handleSubmit, selectedModel]);
 
   return (
     <div className={`flex h-full w-full flex-col max-h-[calc(100vh-5rem)]`}>
       <div className={`flex flex-col grow justify-between h-full`}>
         {messages.length < 1 && (
-          <div className={`flex justify-center items-center grow`}>
+          <div
+            className={`flex justify-center items-center grow ${
+              conversation.loading ? "opacity-0" : "opacity-100"
+            } transition-opacity duration-500`}
+          >
             <Heading className={`text-3xl`}>How can I help you,&nbsp;</Heading>
-            <UserFullName className="text-3xl font-bold"/>
+            <UserFullName className="text-3xl font-bold" />
             <h1 className="text-3xl font-bold">!</h1>
           </div>
         )}
