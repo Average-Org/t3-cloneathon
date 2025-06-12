@@ -47,54 +47,62 @@ export function AppSidebar({ children }: AppSidebarProps) {
   const user = useCurrentUser();
 
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    if (!user.user?.id) return;
 
-    const subscribeToChanges = async () => {
-      channel = supabase
-        .channel("table-db-changes")
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "conversations",
-            // Use the user id from the session instead of supabase.auth.user()
-            filter: `user_id=eq.${user.user?.id}`,
-          },
-          (payload) => {
-            setConversations((prev) => {
-              const newRow = payload.new as Tables<"conversations">;
-              const oldRow = payload.old as Tables<"conversations">;
+    const channel = supabase
+      .channel("table-db-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+          // Use the user id from the session instead of supabase.auth.user()
+          filter: `user=eq.${user.user?.id}`,
+        },
+        (payload) => {
+          setConversations((prev) => {
+            const newRow = payload.new as Tables<"conversations">;
+            const oldRow = payload.old as Tables<"conversations">;
 
-              // Helper to normalize conversation object
-              const normalize = (row: any) => ({
-                id: row.id,
-                name: row.name ?? "Untitled Chat",
-              });
-
-              if (payload.eventType === "DELETE") {
-                return prev.filter((conv) => conv.id !== oldRow.id);
-              } else if (payload.eventType === "INSERT") {
-                return [normalize(newRow), ...prev];
-              } else if (payload.eventType === "UPDATE") {
-                return prev.map((conv) =>
-                  conv.id === newRow.id ? normalize(newRow) : conv
-                );
-              }
-              return prev;
+            // Helper to normalize conversation object
+            const normalize = (row: any) => ({
+              id: row.id,
+              name: row.name ?? "Untitled Chat",
             });
-          }
-        )
-        .subscribe();
-    };
 
+            if (payload.eventType === "DELETE") {
+              return prev.filter((conv) => conv.id !== oldRow.id);
+            } else if (payload.eventType === "INSERT") {
+              return [normalize(newRow), ...prev];
+            } else if (payload.eventType === "UPDATE") {
+              return prev.map((conv) =>
+                conv.id === newRow.id ? normalize(newRow) : conv
+              );
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    console.log("Subscribed to conversation changes.");
+
+    return () => {
+      if (channel) {
+        channel.unsubscribe();
+      }
+    };
+  }, [user.user?.id]);
+
+  useEffect(() => {
     const getConversations = async () => {
       const { data, error } = await supabase
         .from("conversations")
         .select("id,name")
         .order("created_at", { ascending: false });
 
-      if (!data) throw new Error("Data could not be retrieved.");
+      if (!data) throw new Error("Conversation data could not be retrieved.");
 
       setConversations(data);
       setLoading(false);
@@ -102,16 +110,9 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
     const initialize = async () => {
       await getConversations();
-      subscribeToChanges();
     };
 
     initialize();
-
-    return () => {
-      if (channel) {
-        channel.unsubscribe();
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -193,7 +194,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
               </div>
             </Button>
           )}
-          { user.user && (
+          {user.user && (
             <div className="flex items-center gap-3 bg-background/50 p-3 rounded-xl">
               <div className="w-10 h-10 flex justify-center items-center rounded-full overflow-hidden">
                 <UserProfilePicture />
