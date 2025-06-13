@@ -1,6 +1,4 @@
 ﻿"use client";
-
-import { useSidebar } from "@/components/ui/sidebar";
 import { useCallback, useEffect, useState } from "react";
 import { Heading } from "@/components/heading";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,17 +21,12 @@ import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Markdown from "@/utils/markdown";
 import { supabase } from "@/lib/supabaseClient";
-import { Tables } from "@/database.types";
 import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
 import { useConversationCtx } from "@/lib/conversation-context";
 
-interface HomeClientProps {
-  chatId?: string;
-}
-
-export default function HomeClient({ chatId }: HomeClientProps) {
+export default function HomeClient() {
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const {
     messages,
@@ -48,12 +41,10 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     api: "/api/chat",
     credentials: "include",
   });
+
   const router = useRouter();
-  const { setTitle, setCurrentConversationId } = useSidebar();
   const user = useCurrentUser();
-  const [chatIdFromUrl, setChatIdFromUrl] = useState<string | null | undefined>(
-    chatId
-  );
+  const conversation = useConversationCtx();
 
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
@@ -61,8 +52,6 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       insertMessage();
     }
   }
-
-  const conversation = useConversationCtx();
 
   useEffect(() => {
     if (!user.user && !user.isLoading) {
@@ -82,7 +71,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       id = chat?.id;
     }
 
-    if(!id){
+    if (!id) {
       throw new Error("Conversation ID was null when trying to insert message");
     }
 

@@ -2,9 +2,8 @@
 import { supabase } from "@/lib/supabaseClient";
 import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "./use-current-user";
-import { useSidebar } from "@/components/ui/sidebar";
 import { Tables } from "@/database.types";
-import { Message, UIMessage } from "ai";
+import { Message } from "ai";
 
 export function useConversation(chatIdProp?: string | null) {
   const [chat, setChat] = useState<Tables<"conversations"> | null>(null);
