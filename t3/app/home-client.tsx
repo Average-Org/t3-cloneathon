@@ -26,6 +26,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
 import { useConversationStore } from "@/hooks/use-conversation";
 import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
+import { set } from "zod";
 
 interface HomeClientProps {
   chatId?: string;
@@ -37,6 +38,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   const chat = useConversationStore((state) => state.chat);
   const init = useConversationStore((state) => state.init);
   const loadChat = useConversationStore((state) => state.loadChat);
+  const [useSearch, setSearch] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
 
@@ -81,7 +83,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     if (scrollView.current) {
       scrollView.current.scrollTop = scrollView.current.scrollHeight;
     }
-  }, [aiMessages]); 
+  }, [aiMessages]);
 
   useEffect(() => {
     if (chatLoading) {
@@ -103,6 +105,11 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   }, [chatId, init, setAiMessages]);
 
   const insertMessage = useCallback(async () => {
+    if(input.trim() === "" || input.length < 1) {
+      console.warn("Input is empty, not inserting message.");
+      return;
+    }
+    
     let id = chat?.id;
     if (!id) {
       await init(chatId);
@@ -124,7 +131,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       return;
     }
 
-    handleSubmit({}, { data: { conversationId: id, model: selectedModel } });
+    handleSubmit({}, { data: { conversationId: id, model: selectedModel, search: useSearch } });
     await loadChat(id);
   }, [chat?.id, input, handleSubmit, selectedModel]);
 
@@ -239,8 +246,17 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                 </Select>
 
                 <Button
+                  onClick={() => setSearch(!useSearch)}
                   variant={"outline"}
-                  className={`rounded-3xl !px-[0.75rem]`}
+                  className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                    useSearch
+                      ? "!text-accent-foreground !bg-blue-500/80"
+                      : ""
+                  }`}
+                  style={{
+                    transition:
+                      "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                  }}
                 >
                   <GlobeAltIcon />
                   Search

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   console.log(body);
   const { messages, data } = body;
-  const { conversationId: conversation, model } = data;
+  const { conversationId: conversation, model, search } = data;
   const {
     data: { user },
     error,
@@ -68,6 +68,9 @@ export async function POST(req: Request) {
             role: "system",
             content:
               "You are a helpful assistant. Answer the user's questions and be their friend. Please format your messages with Markdown.",
+            tools: {
+                web_search_preview: search ? openai.tools.webSearchPreview() : undefined, 
+            }
           },
           ...messages,
         ],
@@ -83,6 +86,7 @@ export async function POST(req: Request) {
             console.error("Error inserting message:", error);
             return;
           }
+
           if (conversationData.name === "New Chat") {
             try {
               const titleResult = await streamText({
