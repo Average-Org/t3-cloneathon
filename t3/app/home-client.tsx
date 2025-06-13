@@ -65,24 +65,8 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   const conversation = useConversationCtx();
 
   useEffect(() => {
-    if (chatIdFromUrl === "new") {
-      setChatIdFromUrl(null);
-
-      if(!conversation.loading){
-        conversation.createChat().then((chat) => {
-          setChatIdFromUrl(chat?.id);
-        })
-      }
-    }
-
     if (!user.user && !user.isLoading) {
       router.push("/login");
-    }
-
-    if (chatIdFromUrl !== conversation.chat?.id && !conversation.loading) {
-      if (chatIdFromUrl) {
-        conversation.loadChat(chatIdFromUrl);
-      }
     }
   }, [user]);
 
@@ -96,6 +80,10 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     if (!id) {
       const chat = await conversation.createChat();
       id = chat?.id;
+    }
+
+    if(!id){
+      throw new Error("Conversation ID was null when trying to insert message");
     }
 
     const { error } = await supabase.from("messages").insert({

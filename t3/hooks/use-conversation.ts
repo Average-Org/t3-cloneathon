@@ -128,7 +128,8 @@ export function useConversation(chatIdProp?: string | null) {
 
     async function init() {
       setLoading(true);
-
+      console.log("loading conversation");
+      
       try {
         // if they passed in an ID, load that, otherwise, only create once if we don't already have a chat
         let convo: string | undefined;
