@@ -25,6 +25,7 @@ import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
 import { useConversationStore } from "@/hooks/use-conversation";
+import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
 
 interface HomeClientProps {
   chatId?: string;
@@ -38,6 +39,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   const loadChat = useConversationStore((state) => state.loadChat);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
+
   const {
     messages: aiMessages,
     setMessages: setAiMessages,
@@ -55,6 +57,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   const router = useRouter();
   const user = useCurrentUser();
   const hasInitialized = useRef(false);
+  const scrollView = useRef<HTMLDivElement>(null);
 
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
@@ -64,35 +67,39 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   }
 
   useEffect(() => {
+    // runs every time the array in the store changes
+    setAiMessages(stateMessages.map(stateMessageToAiMessage));
+  }, [stateMessages, chatLoading]);
+
+  useEffect(() => {
     if (!user.user && !user.isLoading) {
       router.push("/login");
     }
   }, [user]);
 
   useEffect(() => {
-    if(aiMessages.length > 0 || isLoading) {
+    if (scrollView.current) {
+      scrollView.current.scrollTop = scrollView.current.scrollHeight;
+    }
+  }, [aiMessages]); 
+
+  useEffect(() => {
+    if (chatLoading) {
       return;
     }
-
-    setAiMessages(
-      stateMessages.map((m) => ({
-        id: String(m.id),
-        role: m.assistant ? "assistant" : "user",
-        parts: m.message ? [{ type: "text", text: m.message }] : [],
-        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
-        content: m.message ?? "",
-      }))
-    );
-  }, [stateMessages, setAiMessages]);
+  }, [chatLoading]);
 
   useEffect(() => {
     if (!chatId || hasInitialized.current) {
       return;
     }
 
+    console.log("Initializing chat with ID:", chatId);
     hasInitialized.current = true;
     setAiMessages([]);
-    init(chatId);
+    init(chatId).then(() => {
+      console.log("Chat initialized:", chatId);
+    });
   }, [chatId, init, setAiMessages]);
 
   const insertMessage = useCallback(async () => {
@@ -117,8 +124,8 @@ export default function HomeClient({ chatId }: HomeClientProps) {
       return;
     }
 
-    await loadChat(id);
     handleSubmit({}, { data: { conversationId: id, model: selectedModel } });
+    await loadChat(id);
   }, [chat?.id, input, handleSubmit, selectedModel]);
 
   return (
@@ -138,6 +145,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
         {aiMessages.length > 0 && (
           <div
+            ref={scrollView}
             className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto transition-all duration-500`}
           >
             {error && (
@@ -207,7 +215,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                 </Button>
               ) : (
                 <Button
-                  onClick={handleSubmit}
+                  onClick={insertMessage}
                   variant={"outline"}
                   className={`absolute bottom-2 right-3 rounded-3xl !px-[0.75rem]`}
                 >

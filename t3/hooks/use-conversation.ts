@@ -20,7 +20,7 @@ interface ConversationStore {
 
 export const useConversationStore = create<ConversationStore>((set, get) => ({
   chat: null,
-  messages: [],
+  messages: [] as Tables<"messages">[],
   loading: false,
 
   setMessages: (messages: Tables<"messages">[]) => {
