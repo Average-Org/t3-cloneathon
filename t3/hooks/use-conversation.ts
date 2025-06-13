@@ -11,7 +11,6 @@ export function useConversation(chatIdProp?: string | null) {
   const [loading, setLoading] = useState<boolean>(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const user = useCurrentUser();
-  const sidebar = useSidebar();
 
   const createChat = useCallback(async () => {
     if (user.isLoading || !user.user) return null;
@@ -21,8 +20,6 @@ export function useConversation(chatIdProp?: string | null) {
       .insert({ name: "New Chat", user: user?.user?.id })
       .select()
       .single();
-
-    sidebar.setTitle("New Chat");
 
     if (error) {
       console.error("Error creating chat:", error);
@@ -64,7 +61,6 @@ export function useConversation(chatIdProp?: string | null) {
       }
 
       setChat(conversation.data);
-      sidebar.setTitle(conversation.data.name || "New Chat");
 
       console.log("Chat loaded:", conversation.data);
 
@@ -95,35 +91,14 @@ export function useConversation(chatIdProp?: string | null) {
 
       throw new Error("No messages found for the chat.");
     },
-    [createChat, sidebar]
+    [createChat]
   );
-
-  const subscribeToNameChanges = useCallback(
-    (chatId: string) => {
-      const channel = supabase
-        .channel(`conversation-name-${chatId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "conversations",
-            filter: `id=eq.${chatId}`,
-          },
-          (payload) => {
-            sidebar.setTitle(
-              (payload.new as Tables<"conversations">).name ?? "New Chat"
-            );
-          }
-        )
-        .subscribe();
-
-      return () => supabase.removeChannel(channel);
-    },
-    [sidebar]
-  );
-
   useEffect(() => {
+    // Don't re-run if we're switching to the same conversation
+    if (chat?.id === chatIdProp) {
+      return;
+    }
+
     let cleanupFn: (() => void) | undefined;
 
     async function init() {
@@ -142,7 +117,6 @@ export function useConversation(chatIdProp?: string | null) {
             );
             return;
           }
-          cleanupFn = subscribeToNameChanges(convo);
         } else {
           await loadChat(chatIdProp);
         }
@@ -157,9 +131,6 @@ export function useConversation(chatIdProp?: string | null) {
 
     init();
 
-    return () => {
-      if (cleanupFn) cleanupFn();
-    };
   }, [chatIdProp]);
 
   return {

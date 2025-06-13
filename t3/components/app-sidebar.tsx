@@ -43,7 +43,6 @@ export function AppSidebar({ children }: AppSidebarProps) {
   >([]);
   const [loading, setLoading] = useState(true);
   const conversation = useConversationCtx();
-  const { title, setTitle } = useSidebar();
   const user = useCurrentUser();
 
   useEffect(() => {
@@ -220,15 +219,15 @@ export function AppSidebar({ children }: AppSidebarProps) {
           <div className={`bg-background grow border`}>
             <div
               className={`flex items-center w-full p-5 ${
-                title ? "border-b" : ""
+                conversation.chat?.name ? "border-b" : ""
               }`}
             >
               <Heading
                 className={`text-foreground/75 text-3xl ml-12 ${
-                  !title ? "opacity-0" : ""
+                  !conversation.chat?.name ? "opacity-0" : ""
                 }`}
               >
-                {title || "Placeholder"}
+                {conversation.chat?.name || "Placeholder"}
               </Heading>
             </div>
             {children}
@@ -264,15 +263,15 @@ export function AppSidebar({ children }: AppSidebarProps) {
             <div className={`bg-background grow rounded-tl-xl border`}>
               <div
                 className={`flex items-center w-full p-3 ${
-                  title ? "border-b" : ""
+                  conversation.chat?.name ? "border-b" : ""
                 }`}
               >
                 <Heading
                   className={`text-foreground/75 text-3xl ml-4 ${
-                    !title ? "opacity-0" : ""
+                    !conversation.chat?.name ? "opacity-0" : ""
                   }`}
                 >
-                  {title || "Placeholder"}
+                  {conversation.chat?.name || "Placeholder"}
                 </Heading>
               </div>
               {children}
