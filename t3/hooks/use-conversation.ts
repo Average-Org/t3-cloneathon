@@ -1,142 +1,104 @@
-"use client";
+// /stores/conversationStore.ts
+import { create } from "zustand";
 import { supabase } from "@/lib/supabaseClient";
-import { useCallback, useEffect, useState } from "react";
-import { useCurrentUser } from "./use-current-user";
-import { Tables } from "@/database.types";
-import { Message } from "ai";
+import type { Tables } from "@/database.types";
+import type { Message as AIMessage } from "ai";
 
-export function useConversation(chatIdProp?: string | null) {
-  const [chat, setChat] = useState<Tables<"conversations"> | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const user = useCurrentUser();
+type Conversation = Tables<"conversations">;
 
-  const createChat = useCallback(async () => {
-    if (user.isLoading || !user.user) return null;
+interface ConversationStore {
+  chat: Conversation | null;
+  messages: Tables<"messages">[];
+  loading: boolean;
+
+  // actions
+  createChat: () => Promise<Conversation | null>;
+  loadChat: (chatId: string) => Promise<void>;
+  init: (chatIdProp?: string | null) => Promise<void>;
+  setMessages: (messages: Tables<"messages">[]) => void;
+}
+
+export const useConversationStore = create<ConversationStore>((set, get) => ({
+  chat: null,
+  messages: [],
+  loading: false,
+
+  setMessages: (messages: Tables<"messages">[]) => {
+    set({ messages: messages });
+  },
+
+  createChat: async () => {
+    // grab current user directly from Supabase
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
 
     const { data, error } = await supabase
       .from("conversations")
-      .insert({ name: "New Chat", user: user?.user?.id })
+      .insert({ name: "New Chat", user: user.id })
       .select()
       .single();
 
     if (error) {
       console.error("Error creating chat:", error);
-      throw new Error("Failed to create chat.", error);
+      return null;
     }
 
-    if (data) {
-      setChat(data);
-      console.log("New chat created with ID:", data.id);
-    } else {
-      console.error("No chat data returned after creation.");
+    if (!data) {
+      console.error("Could not get a response after creating chat.");
+      return null;
     }
 
+    set({ chat: data });
     return data;
-  }, [user]);
+  },
 
-  const loadChat = useCallback(
-    async (chatId: string) => {
-      let chatIdToUse = chatId;
+  loadChat: async (chatId) => {
+    console.log("Attempting to load chat:", chatId);
+    const { data: convo, error: convoErr } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("id", chatId)
+      .single();
 
-      if (!chatIdToUse) {
-        throw new Error("Invalid chat");
-      }
+    console.log("Chat loaded: ", convo);
 
-      const conversation = await supabase
-        .from("conversations")
-        .select("*")
-        .eq("id", chatIdToUse)
-        .single();
+    if (convoErr || !convo) {
+      console.error("Error fetching conversation:", convoErr);
+      return;
+    }
+    set({ chat: convo });
 
-      if (conversation.error) {
-        console.error("Error fetching conversation:", conversation.error);
-        return;
-      }
+    const { data: msgs, error: msgErr } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation", chatId)
+      .order("created_at", { ascending: true });
 
-      if (!conversation.data) {
-        console.error("No conversation data found for ID:", chatIdToUse);
-        return;
-      }
-
-      setChat(conversation.data);
-
-      console.log("Chat loaded:", conversation.data);
-
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation", chatIdToUse)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error loading chat messages:", error);
-        throw new Error("Failed to load chat messages.", error);
-      }
-
-      if (data) {
-        console.log(data);
-        setMessages(
-          data.map((msg) => ({
-            id: msg.id.toString(),
-            role: msg.assistant ? "assistant" : "user",
-            content: msg.message ?? "",
-            parts: [{ type: "text", text: msg.message ?? "" }],
-          }))
-        );
-
-        return [];
-      }
-
-      throw new Error("No messages found for the chat.");
-    },
-    [createChat]
-  );
-  useEffect(() => {
-    // Don't re-run if we're switching to the same conversation
-    if (chat?.id === chatIdProp) {
+    if (msgErr) {
+      console.error("Error loading chat messages:", msgErr);
       return;
     }
 
-    let cleanupFn: (() => void) | undefined;
+    set({ messages: msgs });
+  },
 
-    async function init() {
-      setLoading(true);
-      console.log("loading conversation");
-      
-      try {
-        // if they passed in an ID, load that, otherwise, only create once if we don't already have a chat
-        let convo: string | undefined;
-        if (chatIdProp === "new" || !chatIdProp) {
-          convo = (await createChat())?.id;
-
-          if (!convo) {
-            console.warn(
-              "User was not logged in and attempted to create chat."
-            );
-            return;
-          }
-        } else {
-          await loadChat(chatIdProp);
-        }
-
-        // subscribe once for name‐changes
-      } catch (err) {
-        console.error("Conversation init error:", err);
-      } finally {
-        setLoading(false);
+  init: async (chatIdProp) => {
+    set({ chat: null })
+    set({ messages: [] });
+    set({ loading: true });
+    try {
+      if (chatIdProp === "new" || !chatIdProp) {
+        const newConvo = await get().createChat();
+        if (!newConvo) throw new Error("Could not create chat");
+      } else {
+        await get().loadChat(chatIdProp);
       }
+    } catch (err) {
+      console.error("Conversation init error:", err);
+    } finally {
+      set({ loading: false });
     }
-
-    init();
-
-  }, [chatIdProp]);
-
-  return {
-    chat,
-    messages,
-    loading,
-    createChat,
-    loadChat,
-  };
-}
+  },
+}));

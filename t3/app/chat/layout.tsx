@@ -1,7 +1,6 @@
 "use client";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ConversationProvider } from "../../../lib/conversation-context";
 
 export default function ChatLayout({
   children,
@@ -10,9 +9,7 @@ export default function ChatLayout({
 }) {
   return (
     <SidebarProvider>
-      <ConversationProvider>
-        <AppSidebar>{children}</AppSidebar>
-      </ConversationProvider>
+      <AppSidebar>{children}</AppSidebar>
     </SidebarProvider>
   );
 }

@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Heading } from "@/components/heading";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -24,13 +24,23 @@ import { supabase } from "@/lib/supabaseClient";
 import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
-import { useConversationCtx } from "@/lib/conversation-context";
+import { useConversationStore } from "@/hooks/use-conversation";
 
-export default function HomeClient() {
+interface HomeClientProps {
+  chatId?: string;
+}
+
+export default function HomeClient({ chatId }: HomeClientProps) {
+  const stateMessages = useConversationStore((state) => state.messages);
+  const chatLoading = useConversationStore((state) => state.loading);
+  const chat = useConversationStore((state) => state.chat);
+  const init = useConversationStore((state) => state.init);
+  const loadChat = useConversationStore((state) => state.loadChat);
+
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const {
-    messages,
-    setMessages,
+    messages: aiMessages,
+    setMessages: setAiMessages,
     input,
     handleInputChange,
     handleSubmit,
@@ -44,7 +54,7 @@ export default function HomeClient() {
 
   const router = useRouter();
   const user = useCurrentUser();
-  const conversation = useConversationCtx();
+  const hasInitialized = useRef(false);
 
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.code === "Enter" && !event.shiftKey) {
@@ -60,15 +70,36 @@ export default function HomeClient() {
   }, [user]);
 
   useEffect(() => {
-    setMessages(conversation.messages);
-  }, [conversation.loading]);
+    if(aiMessages.length > 0 || isLoading) {
+      return;
+    }
+
+    setAiMessages(
+      stateMessages.map((m) => ({
+        id: String(m.id),
+        role: m.assistant ? "assistant" : "user",
+        parts: m.message ? [{ type: "text", text: m.message }] : [],
+        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+        content: m.message ?? "",
+      }))
+    );
+  }, [stateMessages, setAiMessages]);
+
+  useEffect(() => {
+    if (!chatId || hasInitialized.current) {
+      return;
+    }
+
+    hasInitialized.current = true;
+    setAiMessages([]);
+    init(chatId);
+  }, [chatId, init, setAiMessages]);
 
   const insertMessage = useCallback(async () => {
-    let id = conversation.chat?.id;
-
+    let id = chat?.id;
     if (!id) {
-      const chat = await conversation.createChat();
-      id = chat?.id;
+      await init(chatId);
+      id = useConversationStore.getState().chat?.id;
     }
 
     if (!id) {
@@ -86,16 +117,17 @@ export default function HomeClient() {
       return;
     }
 
+    await loadChat(id);
     handleSubmit({}, { data: { conversationId: id, model: selectedModel } });
-  }, [conversation.chat?.id, input, handleSubmit, selectedModel]);
+  }, [chat?.id, input, handleSubmit, selectedModel]);
 
   return (
     <div className={`flex h-full w-full flex-col max-h-[calc(100vh-5rem)]`}>
       <div className={`flex flex-col grow justify-between h-full`}>
-        {messages.length < 1 && (
+        {aiMessages.length < 1 && (
           <div
             className={`flex justify-center items-center grow ${
-              conversation.loading ? "opacity-0" : "opacity-100"
+              chatLoading || isLoading ? "opacity-0" : "opacity-100"
             } transition-opacity duration-500`}
           >
             <Heading className={`text-3xl`}>How can I help you,&nbsp;</Heading>
@@ -104,7 +136,7 @@ export default function HomeClient() {
           </div>
         )}
 
-        {messages.length > 0 && (
+        {aiMessages.length > 0 && (
           <div
             className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto transition-all duration-500`}
           >
@@ -123,7 +155,7 @@ export default function HomeClient() {
               </div>
             )}
 
-            {messages.map((message) => (
+            {aiMessages.map((message) => (
               <div
                 key={message.id}
                 className={`flex w-full max-w-[80%] ${
@@ -136,13 +168,13 @@ export default function HomeClient() {
                   } px-4 py-2 rounded-xl`}
                 >
                   <article className={`whitespace-normal `}>
-                    {message.parts.map((part, i) => {
-                      switch (part.type) {
+                    {message.parts?.map((m, i) => {
+                      switch (m.type) {
                         case "text":
                           return (
                             <Markdown
                               key={`${message.id}-${i}`}
-                              text={part.text}
+                              text={m.text}
                             />
                           );
                       }

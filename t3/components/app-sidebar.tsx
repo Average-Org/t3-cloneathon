@@ -29,7 +29,7 @@ import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHo
 import { Tables } from "@/database.types";
 import { ConversationItem } from "./sidebar/conversation-item";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useConversationCtx } from "@/lib/conversation-context";
+import { useConversationStore } from "@/hooks/use-conversation";
 
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   componentProps?: React.ComponentProps<"div">;
@@ -42,11 +42,11 @@ export function AppSidebar({ children }: AppSidebarProps) {
     { id: string; name: string | null }[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const conversation = useConversationCtx();
+  const chat = useConversationStore((state) => state.chat);
   const user = useCurrentUser();
 
   useEffect(() => {
-    if (!user.user?.id) return;
+    if (!user.user?.id || user.isLoading) return;
 
     const channel = supabase
       .channel("table-db-changes")
@@ -91,7 +91,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
         channel.unsubscribe();
       }
     };
-  }, [user.user?.id]);
+  }, [user.isLoading]);
 
   useEffect(() => {
     const getConversations = async () => {
@@ -171,10 +171,10 @@ export function AppSidebar({ children }: AppSidebarProps) {
             {!loading &&
               conversations.map((c) => (
                 <ConversationItem
-                  key={c.id}
+                  key={c.id + "sidebar"}
                   id={c.id}
                   name={c.name ?? "Untitled Chat"}
-                  active={conversation.chat?.id === c.id}
+                  active={chat?.id === c.id}
                   onClick={goToChat}
                 />
               ))}
@@ -219,15 +219,15 @@ export function AppSidebar({ children }: AppSidebarProps) {
           <div className={`bg-background grow border`}>
             <div
               className={`flex items-center w-full p-5 ${
-                conversation.chat?.name ? "border-b" : ""
+                chat?.name ? "border-b" : ""
               }`}
             >
               <Heading
                 className={`text-foreground/75 text-3xl ml-12 ${
-                  !conversation.chat?.name ? "opacity-0" : ""
+                  !chat?.name ? "opacity-0" : ""
                 }`}
               >
-                {conversation.chat?.name || "Placeholder"}
+                {chat?.name || "Placeholder"}
               </Heading>
             </div>
             {children}
@@ -263,15 +263,15 @@ export function AppSidebar({ children }: AppSidebarProps) {
             <div className={`bg-background grow rounded-tl-xl border`}>
               <div
                 className={`flex items-center w-full p-3 ${
-                  conversation.chat?.name ? "border-b" : ""
+                  chat?.name ? "border-b" : ""
                 }`}
               >
                 <Heading
                   className={`text-foreground/75 text-3xl ml-4 ${
-                    !conversation.chat?.name ? "opacity-0" : ""
+                    !chat?.name ? "opacity-0" : ""
                   }`}
                 >
-                  {conversation.chat?.name || "Placeholder"}
+                  {chat?.name || "Placeholder"}
                 </Heading>
               </div>
               {children}
