@@ -238,6 +238,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
                   <SelectContent>
                     <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
+                    <SelectItem value={`gpt-4o-mini`}>GPT 4o mini</SelectItem>
 
                     <SelectItem value={`claude-3-5-sonnet-20241022`}>
                       Claude 3.5 Sonnet

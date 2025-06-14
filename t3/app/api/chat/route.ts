@@ -5,10 +5,19 @@ import { streamText, createDataStreamResponse } from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
-function getModel(model: string) {
+function getProvider(model: string, search: boolean) {
   if (!model) {
     console.warn("Model not specified, defaulting to gpt-4o");
     model = "gpt-4o";
+  }
+
+  if(search){
+    switch(model){
+      case "gpt-4o":
+        return openai("gpt-4o-search-preview");
+      case "gpt-4o-mini":
+        return openai("gpt-4o-mini-search-preview");
+    }
   }
 
   if (model.includes("gpt") || model.includes("openai")) {
@@ -34,7 +43,7 @@ export async function POST(req: Request) {
 
   console.log(
     user?.email +
-      " sent a request to AI route in conversation ID: " +
+      ` sent a ${search ? 'web-search' : 'non-search'} request to AI route in conversation ID: ` +
       conversation
   );
 
@@ -62,7 +71,7 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
-        model: getModel(model),
+        model: getProvider(model, search),
         messages: [
           {
             role: "system",
@@ -90,7 +99,7 @@ export async function POST(req: Request) {
           if (conversationData.name === "New Chat") {
             try {
               const titleResult = await streamText({
-                model: getModel(model),
+                model: getProvider(model,search),
                 onError: (error) =>
                   console.error("Error generating conversation name: " + error),
                 onFinish: async (titleMessage) => {
