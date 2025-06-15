@@ -255,7 +255,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                 className={`text-foreground/75 text-3xl ml-12 line-clamp-1 text-ellipsis
                 }`}
               >
-                {chat?.name || "New Chat"}
+                {chat?.name || "..."}
               </Heading>
             </div>
             {children}
@@ -296,7 +296,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                   className={`text-foreground/75 text-3xl ml-4 line-clamp-1 text-ellipsis
                   }`}
                 >
-                  {chat?.name || "New Chat"}
+                  {chat?.name || "..."}
                 </Heading>
               </div>
               {children}

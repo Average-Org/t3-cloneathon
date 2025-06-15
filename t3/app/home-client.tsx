@@ -15,6 +15,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectLabel,
+
 } from "@/components/ui/select";
 import { AlertCircleIcon, BotIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
@@ -28,6 +30,8 @@ import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
 import { UserSettings, useUserSettingsStore } from "@/hooks/user-settings-store";
+import { getModelSearchDefinition } from "@/lib/model-search-awareness";
+import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
@@ -61,6 +65,10 @@ export default function HomeClient({
     credentials: "include",
     initialMessages: messages.map(stateMessageToAiMessage),
   });
+
+  function canSearch(modelName: string) {
+    return getModelSearchDefinition(modelName).canDoWebSearch;
+  }
 
   const router = useRouter();
   const user = useCurrentUser();
@@ -203,38 +211,60 @@ export default function HomeClient({
                   </SelectTrigger>
 
                   <SelectContent>
-                    <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
-                    <SelectItem value={`gpt-4o-mini`}>GPT 4o mini</SelectItem>
+                    <SelectGroup>
+                      <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
+                        OpenAI
+                      </SelectLabel>
+                      <SelectItem value={`gpt-4.1`}>GPT 4.1</SelectItem>
+                      <SelectItem value={`gpt-4.1-mini`}>GPT 4.1 mini</SelectItem>
+                      <SelectItem value={`gpt-4.1-nano`}>GPT 4.1 nano</SelectItem>
+                      <SelectItem value={`o3-mini`}>GPT o3 mini</SelectItem>
+                      <SelectItem value={`o4-mini`}>GPT o4 mini</SelectItem>
 
-                    <SelectItem value={`claude-sonnet-4-20250514`}>
-                      Claude Sonnet 4
-                    </SelectItem>
-                    <SelectItem value={`claude-opus-4-20250514`}>
-                      Claude Opus 4
-                    </SelectItem>
-                    <SelectItem value={`claude-3-7-sonnet-latest`}>
-                      Claude 3.7 Sonnet
-                    </SelectItem>
-                    <SelectItem value={`claude-3-5-sonnet-latest`}>
-                      Claude 3.5 Sonnet
-                    </SelectItem>
+                      <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
+                      <SelectItem value={`gpt-4o-mini`}>GPT 4o mini</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
+                        Anthropic
+                      </SelectLabel>
+                      <SelectItem value={`claude-sonnet-4-20250514`}>
+                        Claude Sonnet 4
+                      </SelectItem>
+                      <SelectItem value={`claude-opus-4-20250514`}>
+                        Claude Opus 4
+                      </SelectItem>
+                      <SelectItem value={`claude-3-7-sonnet-latest`}>
+                        Claude 3.7 Sonnet
+                      </SelectItem>
+                      <SelectItem value={`claude-3-5-sonnet-latest`}>
+                        Claude 3.5 Sonnet
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
 
-                <Button
-                  onClick={() => setSearch(!useSearch)}
-                  variant={"outline"}
-                  className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
-                    useSearch ? "!text-accent-foreground !bg-blue-500/80" : ""
-                  }`}
-                  style={{
-                    transition:
-                      "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
-                  }}
-                >
-                  <GlobeAltIcon />
-                  Search
-                </Button>
+                {canSearch(selectedModel) && (
+                  <>
+                    <Button
+                      onClick={() => setSearch(!useSearch)}
+                      variant={"outline"}
+                      className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                        useSearch
+                          ? "!text-accent-foreground !bg-blue-500/80"
+                          : ""
+                      }`}
+                      style={{
+                        transition:
+                          "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                      }}
+                    >
+                      <GlobeAltIcon />
+                      Search
+                    </Button>
+                  </>
+                )}
+
                 <Button
                   variant={"outline"}
                   className={`rounded-3xl !px-[0.75rem]`}
