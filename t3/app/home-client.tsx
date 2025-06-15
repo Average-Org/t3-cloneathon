@@ -28,6 +28,7 @@ import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
+import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
@@ -199,21 +200,36 @@ export default function HomeClient({
                   </SelectTrigger>
 
                   <SelectContent>
-                    <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
-                    <SelectItem value={`gpt-4o-mini`}>GPT 4o mini</SelectItem>
+                    <SelectGroup>
+                      <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
+                        OpenAI
+                      </SelectLabel>
+                      <SelectItem value={`gpt-4.1`}>GPT 4.1</SelectItem>
+                      <SelectItem value={`gpt-4.1-mini`}>GPT 4.1 mini</SelectItem>
+                      <SelectItem value={`gpt-4.1-nano`}>GPT 4.1 nano</SelectItem>
+                      <SelectItem value={`o3-mini`}>GPT o3 mini</SelectItem>
+                      <SelectItem value={`o4-mini`}>GPT o4 mini</SelectItem>
 
-                    <SelectItem value={`claude-sonnet-4-20250514`}>
-                      Claude Sonnet 4
-                    </SelectItem>
-                    <SelectItem value={`claude-opus-4-20250514`}>
-                      Claude Opus 4
-                    </SelectItem>
-                    <SelectItem value={`claude-3-7-sonnet-latest`}>
-                      Claude 3.7 Sonnet
-                    </SelectItem>
-                    <SelectItem value={`claude-3-5-sonnet-latest`}>
-                      Claude 3.5 Sonnet
-                    </SelectItem>
+                      <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
+                      <SelectItem value={`gpt-4o-mini`}>GPT 4o mini</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
+                        Anthropic
+                      </SelectLabel>
+                      <SelectItem value={`claude-sonnet-4-20250514`}>
+                        Claude Sonnet 4
+                      </SelectItem>
+                      <SelectItem value={`claude-opus-4-20250514`}>
+                        Claude Opus 4
+                      </SelectItem>
+                      <SelectItem value={`claude-3-7-sonnet-latest`}>
+                        Claude 3.7 Sonnet
+                      </SelectItem>
+                      <SelectItem value={`claude-3-5-sonnet-latest`}>
+                        Claude 3.5 Sonnet
+                      </SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
 

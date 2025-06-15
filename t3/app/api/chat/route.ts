@@ -17,7 +17,7 @@ function getProvider(model: string, search: boolean) {
   };
   
   provider.searchCapability = getModelSearchDefinition(model);
-
+  
   let modelToUse = "gpt-4o";
   if(provider.searchCapability.canDoWebSearch && search && provider.searchCapability.modelSearchName){
       modelToUse = provider.searchCapability.modelSearchName;
@@ -25,7 +25,7 @@ function getProvider(model: string, search: boolean) {
     modelToUse = provider.searchCapability.modelName;
   }
 
-  if (modelToUse.includes("gpt") || modelToUse.includes("openai")) {
+  if (modelToUse.includes("gpt") || modelToUse.includes("openai") || modelToUse.startsWith("o")) {
     return openai(modelToUse);
   } else if (modelToUse.includes("claude") || modelToUse.includes("anthropic")) {
     return anthropic(modelToUse);
