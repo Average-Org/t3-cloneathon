@@ -27,21 +27,26 @@ import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
 import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
+import { UserSettings, useUserSettingsStore } from "@/hooks/user-settings-store";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
   shouldReplaceUrl: boolean;
+  userSettings: UserSettings;
 }
 
 export default function HomeClient({
   chat,
   messages,
   shouldReplaceUrl,
+  userSettings
 }: HomeClientProps) {
   const [useSearch, setSearch] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const setChat = useConversationStore((state) => state.setChat);
+  const setUserSettings = useUserSettingsStore((state) => state.setUserSettings);
+  const userSettingsState = useUserSettingsStore((state) => state.userSettings);
   const {
     messages: aiMessages,
     setMessages: setAiMessages,
@@ -83,6 +88,10 @@ export default function HomeClient({
       scrollView.current.scrollTop = scrollView.current.scrollHeight;
     }
   }, [aiMessages]);
+
+  useEffect(() => {
+        setUserSettings(userSettings);
+  }, [userSettings])
 
   const insertMessage = useCallback(async () => {
     if (input.trim() === "" || input.length < 1) {

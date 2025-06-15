@@ -64,11 +64,38 @@ export default async function ChatRoute({ params }: PageProps) {
     console.error("Failed to retrieve messages:", messagesError);
     // Don't redirect, just pass empty messages array
   }
+
+  // fetch user settings
+  let {data: userSettingsData, error: userSettingsError} = await supabase
+    .from("usersettings")
+    .select()
+    .single()
+
+  if(userSettingsError || !userSettingsData){
+      let {data: insertedUserSettingsData, error: insertedErrorUserSettings} = await supabase
+      .from("usersettings")
+      .insert({name: "", job: "Assistant", traits: [], user_id: user.data.user.id })
+      .single();
+
+      if(insertedErrorUserSettings){
+        if(userSettingsError){
+          console.error(userSettingsError);
+        }
+        console.error(insertedErrorUserSettings)
+        throw new Error("There was an error inserting user settings");
+      }
+
+      userSettingsData = insertedUserSettingsData;
+  }
+
+    console.log(userSettingsData);
+
   // get messages for the chat
   return (
     <HomeClient
       chat={chat}
       shouldReplaceUrl={shouldReplaceUrl}
+      userSettings={userSettingsData}
       messages={(messages || []) as Tables<"messages">[]}
     />
   );
