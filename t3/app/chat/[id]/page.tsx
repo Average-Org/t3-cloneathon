@@ -1,8 +1,75 @@
-"use client";
 import HomeClient from "@/app/home-client";
-import { useParams } from "next/navigation";
+import { Tables } from "@/database.types";
+import { createClient } from "@/lib/server";
+import { redirect } from "next/navigation";
 
-export default function ChatRoute() {
-  const { id } = useParams<{id: string}>();
-  return <HomeClient chatId={id} />;
+type PageProps = {
+  params: { id: string };
+};
+
+export default async function ChatRoute({ params }: PageProps) {
+  let chat: Tables<"conversations"> | null = null;
+  const supabase = await createClient();
+  const user = await supabase.auth.getUser();
+  const { id } = await params;
+  let shouldReplaceUrl = false;
+
+  if (!user.data.user) {
+    redirect("/login");
+  }
+  if (id === "new") {
+    const { data, error } = await supabase
+      .from("conversations")
+      .insert({ name: "New Chat", user: user.data.user.id })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error("Failed to create conversation");
+    }
+
+    chat = data;
+    shouldReplaceUrl = true;
+  } else {
+    console.log("Retrieving chat with ID:", id);
+    
+    // Single query to get conversation with user authorization check
+    const { data: conversationData, error: conversationError } = await supabase
+      .from("conversations")
+      .select()
+      .eq("id", id)
+      .eq("user", user.data.user.id) // Security: ensure user owns the conversation
+      .single();
+
+    if (conversationError) {
+      console.error("Failed to retrieve conversation:", conversationError);
+      redirect("/chat/new");
+    }
+
+    chat = conversationData;
+  }
+
+  if (!chat) {
+    redirect("/chat/new");
+  }
+
+  // Get messages for the chat in a separate optimized query
+  const { data: messages, error: messagesError } = await supabase
+    .from("messages")
+    .select("id, message, assistant, created_at")
+    .eq("conversation", chat.id)
+    .order("created_at", { ascending: true });
+
+  if (messagesError) {
+    console.error("Failed to retrieve messages:", messagesError);
+    // Don't redirect, just pass empty messages array
+  }
+  // get messages for the chat
+  return (
+    <HomeClient
+      chat={chat}
+      shouldReplaceUrl={shouldReplaceUrl}
+      messages={(messages || []) as Tables<"messages">[]}
+    />
+  );
 }

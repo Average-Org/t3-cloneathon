@@ -7,7 +7,6 @@ import {
   SidebarGroup,
   SidebarHeader,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { Heading } from "@/components/heading";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { LogInIcon, SearchIcon } from "lucide-react";
 import * as React from "react";
-import { useEffect, useState, startTransition } from "react";
+import { useEffect, useState, startTransition, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import UserProfilePicture from "./ProfilePicture";
 import UserFullName from "./Username";
@@ -43,7 +42,12 @@ export function AppSidebar({ children }: AppSidebarProps) {
   >([]);
   const [loading, setLoading] = useState(true);
   const chat = useConversationStore((state) => state.chat);
+  const chatRef = React.useRef(chat);
+  const updateCurrentChatName = useConversationStore(
+    (state) => state.updateCurrentChatName
+  );
   const user = useCurrentUser();
+  const router = useRouter();
 
   useEffect(() => {
     if (!user.user?.id || user.isLoading) return;
@@ -59,6 +63,8 @@ export function AppSidebar({ children }: AppSidebarProps) {
           filter: `user=eq.${user.user?.id}`,
         },
         (payload) => {
+          startTransition(() => {
+          console.log("Change received:", payload);
           setConversations((prev) => {
             const newRow = payload.new as Tables<"conversations">;
             const oldRow = payload.old as Tables<"conversations">;
@@ -69,29 +75,54 @@ export function AppSidebar({ children }: AppSidebarProps) {
               name: row.name ?? "Untitled Chat",
             });
 
+            console.log(
+              "Current chat:",
+              chatRef.current?.id,
+              "Updated chat:",
+              newRow.id,
+              "Old chat:",
+              oldRow.id
+            );
+
             if (payload.eventType === "DELETE") {
               return prev.filter((conv) => conv.id !== oldRow.id);
             } else if (payload.eventType === "INSERT") {
               return [normalize(newRow), ...prev];
             } else if (payload.eventType === "UPDATE") {
+              if (
+                chatRef.current?.id === oldRow.id &&
+                newRow.name !== "New Chat"
+              ) {
+                // If the current chat is the one that was inserted, update the chat state
+                console.log(
+                  "Updating current chat name to:",
+                  newRow.name ?? "Untitled Chat"
+                );
+                startTransition(() => {
+                  updateCurrentChatName(newRow.name ?? "Untitled Chat");
+                });
+              }
+
               return prev.map((conv) =>
                 conv.id === newRow.id ? normalize(newRow) : conv
               );
             }
             return prev;
           });
-        }
+        })
+      }
       )
       .subscribe();
 
-    console.log("Subscribed to conversation changes.");
+    console.log("Subscribed to conversation changes, for user:", user.user?.id);
 
     return () => {
       if (channel) {
+        console.log("Unsubscribing from conversation changes.");
         channel.unsubscribe();
       }
     };
-  }, [user.isLoading]);
+  }, [user.isLoading, user.user?.id, updateCurrentChatName]);
 
   useEffect(() => {
     const getConversations = async () => {
@@ -111,11 +142,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
     };
 
     initialize();
-  }, []);
-
-  useEffect(() => {
-    router.prefetch("/chat/new");
-  }, []);
+  }, [user.user?.id]);
 
   function toggleSidebar() {
     changeSidebarState((prev) => !prev);
@@ -125,15 +152,18 @@ export function AppSidebar({ children }: AppSidebarProps) {
     setTheme(theme === "light" ? "dark" : "light");
   }
 
-  const router = useRouter();
+  useEffect(() => {
+    chatRef.current = chat;
+  }, [chat]);
 
-  const newChat = React.useCallback(() => {
-    startTransition(() => router.push("/chat/new"));
+  const newChat = useCallback(async () => {
+    // the navigation can be heavy – mark it low-priority
+    router.push(`/chat/new`);
   }, [router]);
 
   const goToChat = React.useCallback(
     (id: string) => {
-      startTransition(() => router.push(`/chat/${id}`));
+      router.push(`/chat/${id}`);
     },
     [router]
   );
@@ -218,16 +248,14 @@ export function AppSidebar({ children }: AppSidebarProps) {
         {!isSidebarOpen && (
           <div className={`bg-background grow border`}>
             <div
-              className={`flex items-center w-full p-5 ${
-                chat?.name ? "border-b" : ""
+              className={`flex items-center w-full p-5 line-clamp-1 text-ellipsis border-b
               }`}
             >
               <Heading
-                className={`text-foreground/75 text-3xl ml-12 ${
-                  !chat?.name ? "opacity-0" : ""
+                className={`text-foreground/75 text-3xl ml-12 line-clamp-1 text-ellipsis
                 }`}
               >
-                {chat?.name || "Placeholder"}
+                {chat?.name || "New Chat"}
               </Heading>
             </div>
             {children}
@@ -260,18 +288,15 @@ export function AppSidebar({ children }: AppSidebarProps) {
               </div>
             </div>
 
-            <div className={`bg-background grow rounded-tl-xl border`}>
-              <div
-                className={`flex items-center w-full p-3 ${
-                  chat?.name ? "border-b" : ""
-                }`}
-              >
+            <div
+              className={`bg-background grow rounded-tl-xl border line-clamp-1 text-ellipsis`}
+            >
+              <div className={`flex items-center w-full p-3 border-b`}>
                 <Heading
-                  className={`text-foreground/75 text-3xl ml-4 ${
-                    !chat?.name ? "opacity-0" : ""
+                  className={`text-foreground/75 text-3xl ml-4 line-clamp-1 text-ellipsis
                   }`}
                 >
-                  {chat?.name || "Placeholder"}
+                  {chat?.name || "New Chat"}
                 </Heading>
               </div>
               {children}
