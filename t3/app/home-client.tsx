@@ -29,10 +29,18 @@ import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
 import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
+import { set } from "zod";
+import { Attachment } from "ai";
+import { toString } from 'hast-util-to-string';
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
   shouldReplaceUrl: boolean;
+}
+
+export interface UploadedFile {
+  url: string;
+  type: string;
 }
 
 export default function HomeClient({
@@ -44,10 +52,12 @@ export default function HomeClient({
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const setChat = useConversationStore((state) => state.setChat);
+  const [attachedFileUrls, setAttachedFileUrls] = useState<UploadedFile[]>([]);
   const {
     messages: aiMessages,
     setMessages: setAiMessages,
     input,
+    setInput,
     handleInputChange,
     handleSubmit,
     error,
@@ -57,6 +67,9 @@ export default function HomeClient({
     api: "/api/chat",
     credentials: "include",
     initialMessages: messages.map(stateMessageToAiMessage),
+    onError: (err) => {
+      console.error("Error in chat:", err);
+    }
   });
 
   function canSearch(modelName: string) {
@@ -109,7 +122,14 @@ export default function HomeClient({
           conversationId: chat.id,
           model: selectedModel,
           search: useSearch,
-        },
+        },  
+        experimental_attachments: [
+          ...attachedFileUrls.map((file) => ({
+            name: file.url.split("/").pop() || "file",
+            contentType: file.type,
+            url: file.url,
+          })),
+        ] as Attachment[],
       }
     );
 
@@ -117,6 +137,7 @@ export default function HomeClient({
       message: input,
       assistant: false,
       conversation: chat?.id,
+      attachments: JSON.stringify(attachedFileUrls)
     });
 
     console.log("Message inserted:", chat?.id);
@@ -124,7 +145,56 @@ export default function HomeClient({
       console.error("Error inserting message:", error);
       return;
     }
+
+    setAttachedFileUrls([]);
   }, [chat?.id, input, handleSubmit, selectedModel, useSearch]);
+
+  function uploadFile() {
+    // open file upload dialog
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        console.log("File selected:", file.name);
+
+        const uuid = crypto.randomUUID();
+        const fileExtension =
+          file.name.split(".").pop()?.toLowerCase() || "bin";
+        // Upload the file to Supabase storage
+        const { data, error } = await supabase.storage
+          .from("file-uploads")
+          .upload(`${user.user?.id}/${uuid}.${fileExtension}`, file, {
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (error) {
+          console.error("Error uploading file:", error);
+          return;
+        }
+
+        if (data) {
+          const { data: publicUrlData } = await supabase.storage
+            .from("file-uploads")
+            .createSignedUrl(data.path, 3600);
+
+          if (publicUrlData) {
+            console.log("File uploaded successfully:", publicUrlData.signedUrl);
+            setAttachedFileUrls((prev) => [
+              ...prev,
+              {
+                url: publicUrlData.signedUrl,
+                type: file.type,
+              },
+            ]);
+          }
+        }
+      }
+    };
+    fileInput.click();
+  }
 
   return (
     <div className={`flex h-full w-full flex-col max-h-[calc(100vh-5rem)]`}>
@@ -141,6 +211,10 @@ export default function HomeClient({
                 <AlertDescription className={`wrap-normal`}>
                   <p>
                     {error.stack?.toString() || "An unexpected error occurred."}
+                  </p>
+
+                  <p>
+                    {error.cause?.toString() || "No additional error information."}
                   </p>
                 </AlertDescription>
               </Alert>
@@ -205,8 +279,12 @@ export default function HomeClient({
                         OpenAI
                       </SelectLabel>
                       <SelectItem value={`gpt-4.1`}>GPT 4.1</SelectItem>
-                      <SelectItem value={`gpt-4.1-mini`}>GPT 4.1 mini</SelectItem>
-                      <SelectItem value={`gpt-4.1-nano`}>GPT 4.1 nano</SelectItem>
+                      <SelectItem value={`gpt-4.1-mini`}>
+                        GPT 4.1 mini
+                      </SelectItem>
+                      <SelectItem value={`gpt-4.1-nano`}>
+                        GPT 4.1 nano
+                      </SelectItem>
                       <SelectItem value={`o3-mini`}>GPT o3 mini</SelectItem>
                       <SelectItem value={`o4-mini`}>GPT o4 mini</SelectItem>
 
@@ -255,8 +333,17 @@ export default function HomeClient({
                 )}
 
                 <Button
+                  onClick={uploadFile}
                   variant={"outline"}
-                  className={`rounded-3xl !px-[0.75rem]`}
+                  className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                    attachedFileUrls.length > 0
+                      ? "!text-accent-foreground !bg-blue-500/80"
+                      : ""
+                  }`}
+                  style={{
+                    transition:
+                      "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                  }}
                 >
                   <PaperClipIcon className="stroke-2" />
                 </Button>

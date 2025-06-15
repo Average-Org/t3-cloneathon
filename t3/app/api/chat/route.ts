@@ -1,10 +1,18 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, createDataStreamResponse, LanguageModelV1 } from "ai";
+import {
+  streamText,
+  createDataStreamResponse,
+  LanguageModelV1,
+  Message,
+} from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
-import { getModelSearchDefinition, ModelSearchDefinition } from "@/lib/model-search-awareness";
+import {
+  getModelSearchDefinition,
+  ModelSearchDefinition,
+} from "@/lib/model-search-awareness";
 
 interface ProviderResult {
   model: LanguageModelV1;
@@ -15,19 +23,30 @@ function getProvider(model: string, search: boolean) {
   const provider: ProviderResult = {
     model: openai("gpt-4o"),
   };
-  
+
   provider.searchCapability = getModelSearchDefinition(model);
-  
+
   let modelToUse = "gpt-4o";
-  if(provider.searchCapability.canDoWebSearch && search && provider.searchCapability.modelSearchName){
-      modelToUse = provider.searchCapability.modelSearchName;
-  }else{
+  if (
+    provider.searchCapability.canDoWebSearch &&
+    search &&
+    provider.searchCapability.modelSearchName
+  ) {
+    modelToUse = provider.searchCapability.modelSearchName;
+  } else {
     modelToUse = provider.searchCapability.modelName;
   }
 
-  if (modelToUse.includes("gpt") || modelToUse.includes("openai") || modelToUse.startsWith("o")) {
+  if (
+    modelToUse.includes("gpt") ||
+    modelToUse.includes("openai") ||
+    modelToUse.startsWith("o")
+  ) {
     return openai(modelToUse);
-  } else if (modelToUse.includes("claude") || modelToUse.includes("anthropic")) {
+  } else if (
+    modelToUse.includes("claude") ||
+    modelToUse.includes("anthropic")
+  ) {
     return anthropic(modelToUse);
   } else {
     throw new Error(`Unsupported model: ${model}`);
@@ -39,19 +58,20 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   console.log(body);
-  const { messages, data } = body;
-  const { conversationId: conversation, model, search } = data;
+  const { messages }: {messages: Message[] } = body;
+  const { data } = body;
+  const { conversationId: conversation, model, search, attachments } = data;
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-
   console.log(
     user?.email +
-      ` sent a ${search ? 'web-search' : 'non-search'} request to AI (${model}) route in conversation ID: ` +
+      ` sent a ${
+        search ? "web-search" : "non-search"
+      } request to AI (${model}) route in conversation ID: ` +
       conversation
   );
-
   const { data: conversationData, error: conversationError } = await supabase
     .from("conversations")
     .select("*")
@@ -82,13 +102,13 @@ export async function POST(req: Request) {
             role: "system",
             content:
               "You are a helpful assistant. Answer the user's questions and be their friend. Please format your messages with Markdown.",
-            tools: {
-                web_search_preview: search ? openai.tools.webSearchPreview() : undefined, 
-            }
           },
           ...messages,
         ],
-        onError: handleError,
+        onError: (error) => {
+          console.error("Error during streaming:", error);
+          errorHandler(error);
+        },
         onFinish: async (message) => {
           const { data, error } = await supabase.from("messages").insert({
             message: message.text,
@@ -104,7 +124,7 @@ export async function POST(req: Request) {
           if (conversationData.name === "New Chat") {
             try {
               const titleResult = await streamText({
-                model: getProvider(model,search),
+                model: getProvider(model, search),
                 onError: (error) =>
                   console.error("Error generating conversation name: " + error),
                 onFinish: async (titleMessage) => {
@@ -113,7 +133,7 @@ export async function POST(req: Request) {
                     titleMessage.text + " for conversation ID: " + conversation
                   );
 
-                  const {error} = await supabase
+                  const { error } = await supabase
                     .from("conversations")
                     .update({ name: titleMessage.text })
                     .eq("id", conversation);
@@ -122,7 +142,10 @@ export async function POST(req: Request) {
                     console.error("Error updating conversation name:", error);
                     return;
                   }
-                  console.log("Conversation name updated successfully:", titleMessage.text);
+                  console.log(
+                    "Conversation name updated successfully:",
+                    titleMessage.text
+                  );
                 },
                 messages: [
                   {
@@ -145,9 +168,29 @@ export async function POST(req: Request) {
 
       result.mergeIntoDataStream(stream);
     },
+    onError: (error) => {
+      return errorHandler(error);
+    }
   });
 }
 
-function handleError(error: unknown) {
-  console.error(error);
+export function errorHandler(error: unknown): string {
+  if (error == null) {
+    console.error('unknown error');
+    return 'unknown error';
+  }
+
+  if (typeof error === 'string') {
+    console.error(error);
+    return error;
+  }
+
+  if (error instanceof Error) {
+    console.error(error.message);
+    return error.message;
+  }
+
+  const errorString = JSON.stringify(error);
+  console.error(errorString);
+  return errorString;
 }

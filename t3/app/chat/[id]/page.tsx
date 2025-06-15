@@ -56,7 +56,7 @@ export default async function ChatRoute({ params }: PageProps) {
   // Get messages for the chat in a separate optimized query
   const { data: messages, error: messagesError } = await supabase
     .from("messages")
-    .select("id, message, assistant, created_at")
+    .select("id, message, assistant, created_at, attachments")
     .eq("conversation", chat.id)
     .order("created_at", { ascending: true });
 
