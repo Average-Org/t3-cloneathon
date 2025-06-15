@@ -5,7 +5,6 @@ import { FilePart, Message, TextPart } from "ai";
 
 
 export const stateMessageToAiMessage = (m: Tables<"messages">): Message => {
-  console.log(m);
   const parts = [];
 
   if(m.message) {

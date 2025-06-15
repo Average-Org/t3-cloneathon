@@ -8,12 +8,18 @@ type Conversation = Tables<"conversations">;
 
 interface ConversationStore {
   chat: Conversation | null;
+  activeId: string | null;
   setChat: (chat: Tables<"conversations">) => void;
   updateCurrentChatName: (name: string) => void;
+  setActiveId: (id: string | null) => void;
 }
 
 export const useConversationStore = create<ConversationStore>((set, get) => ({
   chat: null,
+  activeId: null,
+  setActiveId: (id: string | null) => {
+    set({activeId:id})
+  },
   setChat: (chat: Tables<"conversations">) => {
       set({chat: chat})
   },

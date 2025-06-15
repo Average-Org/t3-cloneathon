@@ -57,7 +57,6 @@ export async function POST(req: Request) {
   const supabase = await createClient();
 
   const body = await req.json();
-  console.log(body);
   const { messages }: {messages: Message[] } = body;
   const { data } = body;
   const { conversationId: conversation, model, search, attachments } = data;

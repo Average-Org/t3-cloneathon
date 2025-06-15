@@ -5,7 +5,6 @@ import { memo, useMemo, useState } from "react";
 export const Message = memo(({ message }: { message: UIMessage }) => {
   const [hovering, setHovering] = useState(false);
 
-  console.log("Rendering message:", message);
   // sort message parts by type, "file" first
   const sortedParts = useMemo(() => {
     if (!message.parts) return [];
@@ -49,7 +48,6 @@ export const Message = memo(({ message }: { message: UIMessage }) => {
                 return <Markdown key={`${message.id}-${i}`} text={m.text} />;
               case "file":
                 const data = m.data as any;
-                console.log("Filedata:",data);
                 if(m.mimeType?.startsWith("image/")) {
                   return (
                     <img

@@ -1,7 +1,7 @@
 import HomeClient from "@/app/home-client";
 import { Tables } from "@/database.types";
 import { UserSettings } from "@/hooks/user-settings-store";
-import { createClient } from "@/lib/server";
+import { createClient, getSupabase, getSupabaseUser } from "@/lib/server";
 import { redirect } from "next/navigation";
 
 type PageProps = {
@@ -9,15 +9,18 @@ type PageProps = {
 };
 
 export default async function ChatRoute({ params }: PageProps) {
-  let chat: Tables<"conversations"> | null = null;
-  const supabase = await createClient();
-  const user = await supabase.auth.getUser();
   const { id } = await params;
+
+  let chat: Tables<"conversations"> | null = null;
+  const supabase = await getSupabase();
+  const user = await getSupabaseUser();
+
   let shouldReplaceUrl = false;
 
   if (!user.data.user) {
     redirect("/login");
   }
+
   if (id === "new") {
     const { data, error } = await supabase
       .from("conversations")
@@ -32,15 +35,13 @@ export default async function ChatRoute({ params }: PageProps) {
     chat = data;
     shouldReplaceUrl = true;
   } else {
-    console.log("Retrieving chat with ID:", id);
-    
     // Single query to get conversation with user authorization check
     const { data: conversationData, error: conversationError } = await supabase
       .from("conversations")
       .select()
       .eq("id", id)
       .eq("user", user.data.user.id) // Security: ensure user owns the conversation
-      .single();
+      .maybeSingle();
 
     if (conversationError) {
       console.error("Failed to retrieve conversation:", conversationError);
@@ -67,30 +68,36 @@ export default async function ChatRoute({ params }: PageProps) {
   }
 
   // fetch user settings
-  let {data: userSettingsData, error: userSettingsError} = await supabase
+  let { data: userSettingsData, error: userSettingsError } = await supabase
     .from("usersettings")
     .select()
     .eq("user_id", user.data.user.id)
     .limit(1);
 
-  if(userSettingsError || !userSettingsData){
-      let {data: insertedUserSettingsData, error: insertedErrorUserSettings} = await supabase
-      .from("usersettings")
-      .insert({name: "", job: "Assistant", traits: [], user_id: user.data.user.id })
-      .single();
+  if (userSettingsError || !userSettingsData) {
+    let { data: insertedUserSettingsData, error: insertedErrorUserSettings } =
+      await supabase
+        .from("usersettings")
+        .insert({
+          name: "",
+          job: "Assistant",
+          traits: [],
+          user_id: user.data.user.id,
+        })
+        .single();
 
-      if(insertedErrorUserSettings){
-        if(userSettingsError){
-          console.error(userSettingsError);
-        }
-        console.error(insertedErrorUserSettings)
-        throw new Error("There was an error inserting user settings");
+    if (insertedErrorUserSettings) {
+      if (userSettingsError) {
+        console.error(userSettingsError);
       }
+      console.error(insertedErrorUserSettings);
+      throw new Error("There was an error inserting user settings");
+    }
 
-      userSettingsData = insertedUserSettingsData;
+    userSettingsData = insertedUserSettingsData;
   }
 
-  if(!userSettingsData){
+  if (!userSettingsData) {
     console.error("User settings data is null or undefined");
     throw new Error("User settings not found");
   }

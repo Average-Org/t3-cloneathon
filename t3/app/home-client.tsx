@@ -57,7 +57,8 @@ export default function HomeClient({
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const setChat = useConversationStore((state) => state.setChat);
-
+  const activeChatId = useConversationStore((state) => state.activeId);
+  const setActiveId = useConversationStore((state) => state.setActiveId);
   const [attachedFileUrls, setAttachedFileUrls] = useState<UploadedFile[]>([]);
     const setUserSettings = useUserSettingsStore((state) => state.setUserSettings);
   const userSettingsState = useUserSettingsStore((state) => state.userSettings);
@@ -112,8 +113,15 @@ export default function HomeClient({
   }, [aiMessages]);
 
   useEffect(() => {
-        setUserSettings(userSettings);
-  }, [userSettings])
+    if (activeChatId === chat?.id || !chat || isLoading) {
+      return;
+    }
+    setActiveId(chat?.id || null);
+  }, [isLoading]);
+
+  useEffect(() => {
+    setUserSettings(userSettings);
+  }, [userSettings]);
 
   const insertMessage = useCallback(async () => {
     if (input.trim() === "" || input.length < 1) {
@@ -125,7 +133,6 @@ export default function HomeClient({
       return;
     }
 
-    console.log("Inserting message:", input);
 
     handleSubmit(
       {},
@@ -169,7 +176,6 @@ export default function HomeClient({
     fileInput.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
-        console.log("File selected:", file.name);
 
         const uuid = crypto.randomUUID();
         const fileExtension =
@@ -190,7 +196,7 @@ export default function HomeClient({
         if (data) {
           const { data: publicUrlData } = await supabase.storage
             .from("file-uploads")
-            .createSignedUrl(data.path, 3600);
+            .createSignedUrl(data.path, Number.MAX_SAFE_INTEGER);
 
           if (publicUrlData) {
             console.log("File uploaded successfully:", publicUrlData.signedUrl);
