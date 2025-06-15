@@ -15,6 +15,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectLabel,
+
 } from "@/components/ui/select";
 import { AlertCircleIcon, BotIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
@@ -27,8 +29,9 @@ import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
 import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
+import { UserSettings, useUserSettingsStore } from "@/hooks/user-settings-store";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
-import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
+import { SelectGroup } from "@radix-ui/react-select";
 import { set } from "zod";
 import { Attachment } from "ai";
 import { toString } from 'hast-util-to-string';
@@ -36,6 +39,7 @@ interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
   shouldReplaceUrl: boolean;
+  userSettings: UserSettings;
 }
 
 export interface UploadedFile {
@@ -47,12 +51,16 @@ export default function HomeClient({
   chat,
   messages,
   shouldReplaceUrl,
+  userSettings
 }: HomeClientProps) {
   const [useSearch, setSearch] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const setChat = useConversationStore((state) => state.setChat);
+
   const [attachedFileUrls, setAttachedFileUrls] = useState<UploadedFile[]>([]);
+    const setUserSettings = useUserSettingsStore((state) => state.setUserSettings);
+  const userSettingsState = useUserSettingsStore((state) => state.userSettings);
   const {
     messages: aiMessages,
     setMessages: setAiMessages,
@@ -102,6 +110,10 @@ export default function HomeClient({
       scrollView.current.scrollTop = scrollView.current.scrollHeight;
     }
   }, [aiMessages]);
+
+  useEffect(() => {
+        setUserSettings(userSettings);
+  }, [userSettings])
 
   const insertMessage = useCallback(async () => {
     if (input.trim() === "" || input.length < 1) {

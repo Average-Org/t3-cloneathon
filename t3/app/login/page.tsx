@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabaseClient"
 import { useCallback } from "react"
 
-export default function Home() {
+export default function Login() {
   const loginWithGithub = useCallback(async() => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "github",
