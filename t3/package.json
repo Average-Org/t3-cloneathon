@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "supabase-types": "npx supabase gen types typescript --project-id zjsfmgebojzvrldemdfv --schema public > database.types.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
