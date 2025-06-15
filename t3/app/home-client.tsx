@@ -27,6 +27,7 @@ import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
 import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
+import { getModelSearchDefinition } from "@/lib/model-search-awareness";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
@@ -56,6 +57,10 @@ export default function HomeClient({
     credentials: "include",
     initialMessages: messages.map(stateMessageToAiMessage),
   });
+
+  function canSearch(modelName: string) {
+    return getModelSearchDefinition(modelName).canDoWebSearch;
+  }
 
   const router = useRouter();
   const user = useCurrentUser();
@@ -212,20 +217,27 @@ export default function HomeClient({
                   </SelectContent>
                 </Select>
 
-                <Button
-                  onClick={() => setSearch(!useSearch)}
-                  variant={"outline"}
-                  className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
-                    useSearch ? "!text-accent-foreground !bg-blue-500/80" : ""
-                  }`}
-                  style={{
-                    transition:
-                      "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
-                  }}
-                >
-                  <GlobeAltIcon />
-                  Search
-                </Button>
+                {canSearch(selectedModel) && (
+                  <>
+                    <Button
+                      onClick={() => setSearch(!useSearch)}
+                      variant={"outline"}
+                      className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                        useSearch
+                          ? "!text-accent-foreground !bg-blue-500/80"
+                          : ""
+                      }`}
+                      style={{
+                        transition:
+                          "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                      }}
+                    >
+                      <GlobeAltIcon />
+                      Search
+                    </Button>
+                  </>
+                )}
+
                 <Button
                   variant={"outline"}
                   className={`rounded-3xl !px-[0.75rem]`}
