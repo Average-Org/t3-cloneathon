@@ -1,20 +1,34 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, createDataStreamResponse } from "ai";
+import { streamText, createDataStreamResponse, LanguageModelV1 } from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
+import { getModelSearchDefinition, ModelSearchDefinition } from "@/lib/model-search-awareness";
 
-function getModel(model: string) {
-  if (!model) {
-    console.warn("Model not specified, defaulting to gpt-4o");
-    model = "gpt-4o";
+interface ProviderResult {
+  model: LanguageModelV1;
+  searchCapability?: ModelSearchDefinition;
+}
+
+function getProvider(model: string, search: boolean) {
+  const provider: ProviderResult = {
+    model: openai("gpt-4o"),
+  };
+  
+  provider.searchCapability = getModelSearchDefinition(model);
+
+  let modelToUse = "gpt-4o";
+  if(provider.searchCapability.canDoWebSearch && search && provider.searchCapability.modelSearchName){
+      modelToUse = provider.searchCapability.modelSearchName;
+  }else{
+    modelToUse = provider.searchCapability.modelName;
   }
 
-  if (model.includes("gpt") || model.includes("openai")) {
-    return openai(model);
-  } else if (model.includes("claude") || model.includes("anthropic")) {
-    return anthropic(model);
+  if (modelToUse.includes("gpt") || modelToUse.includes("openai")) {
+    return openai(modelToUse);
+  } else if (modelToUse.includes("claude") || modelToUse.includes("anthropic")) {
+    return anthropic(modelToUse);
   } else {
     throw new Error(`Unsupported model: ${model}`);
   }
@@ -34,7 +48,7 @@ export async function POST(req: Request) {
 
   console.log(
     user?.email +
-      " sent a request to AI route in conversation ID: " +
+      ` sent a ${search ? 'web-search' : 'non-search'} request to AI (${model}) route in conversation ID: ` +
       conversation
   );
 
@@ -62,7 +76,7 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
-        model: getModel(model),
+        model: getProvider(model, search),
         messages: [
           {
             role: "system",
@@ -90,7 +104,7 @@ export async function POST(req: Request) {
           if (conversationData.name === "New Chat") {
             try {
               const titleResult = await streamText({
-                model: getModel(model),
+                model: getProvider(model,search),
                 onError: (error) =>
                   console.error("Error generating conversation name: " + error),
                 onFinish: async (titleMessage) => {

@@ -19,29 +19,29 @@ import {
 import { AlertCircleIcon, BotIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Markdown from "@/utils/markdown";
 import { supabase } from "@/lib/supabaseClient";
 import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
-import { useConversationStore } from "@/hooks/use-conversation";
 import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
-import { set } from "zod";
-
+import { Message } from "@/components/message";
+import { Tables } from "@/database.types";
+import { useConversationStore } from "@/hooks/use-conversation";
 interface HomeClientProps {
-  chatId?: string;
+  chat: Tables<"conversations"> | null;
+  messages: Tables<"messages">[];
+  shouldReplaceUrl: boolean;
 }
 
-export default function HomeClient({ chatId }: HomeClientProps) {
-  const stateMessages = useConversationStore((state) => state.messages);
-  const chatLoading = useConversationStore((state) => state.loading);
-  const chat = useConversationStore((state) => state.chat);
-  const init = useConversationStore((state) => state.init);
-  const loadChat = useConversationStore((state) => state.loadChat);
+export default function HomeClient({
+  chat,
+  messages,
+  shouldReplaceUrl,
+}: HomeClientProps) {
   const [useSearch, setSearch] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
-
+  const setChat = useConversationStore((state) => state.setChat);
   const {
     messages: aiMessages,
     setMessages: setAiMessages,
@@ -54,6 +54,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
   } = useChat({
     api: "/api/chat",
     credentials: "include",
+    initialMessages: messages.map(stateMessageToAiMessage),
   });
 
   const router = useRouter();
@@ -70,14 +71,12 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
   useEffect(() => {
     // runs every time the array in the store changes
-    setAiMessages(stateMessages.map(stateMessageToAiMessage));
-  }, [stateMessages, chatLoading]);
-
-  useEffect(() => {
-    if (!user.user && !user.isLoading) {
-      router.push("/login");
+    if (shouldReplaceUrl) {
+      router.replace(`/chat/${chat?.id}`);
     }
-  }, [user]);
+    setChat(chat as Tables<"conversations">);
+    shouldReplaceUrl = false;
+  }, [shouldReplaceUrl, chat, messages, setAiMessages, setChat, router]);
 
   useEffect(() => {
     if (scrollView.current) {
@@ -85,121 +84,79 @@ export default function HomeClient({ chatId }: HomeClientProps) {
     }
   }, [aiMessages]);
 
-  useEffect(() => {
-    if (chatLoading) {
-      return;
-    }
-  }, [chatLoading]);
-
-  useEffect(() => {
-    if (!chatId || hasInitialized.current) {
-      return;
-    }
-
-    console.log("Initializing chat with ID:", chatId);
-    hasInitialized.current = true;
-    setAiMessages([]);
-    init(chatId).then(() => {
-      console.log("Chat initialized:", chatId);
-    });
-  }, [chatId, init, setAiMessages]);
-
   const insertMessage = useCallback(async () => {
-    if(input.trim() === "" || input.length < 1) {
+    if (input.trim() === "" || input.length < 1) {
       console.warn("Input is empty, not inserting message.");
       return;
     }
-    
-    let id = chat?.id;
-    if (!id) {
-      await init(chatId);
-      id = useConversationStore.getState().chat?.id;
+
+    if (!chat?.id || !chat) {
+      return;
     }
 
-    if (!id) {
-      throw new Error("Conversation ID was null when trying to insert message");
-    }
+    console.log("Inserting message:", input);
+
+    handleSubmit(
+      {},
+      {
+        data: {
+          conversationId: chat.id,
+          model: selectedModel,
+          search: useSearch,
+        },
+      }
+    );
 
     const { error } = await supabase.from("messages").insert({
       message: input,
       assistant: false,
-      conversation: id,
+      conversation: chat?.id,
     });
 
+    console.log("Message inserted:", chat?.id);
     if (error) {
       console.error("Error inserting message:", error);
       return;
     }
-
-    handleSubmit({}, { data: { conversationId: id, model: selectedModel, search: useSearch } });
-    await loadChat(id);
-  }, [chat?.id, input, handleSubmit, selectedModel]);
+  }, [chat?.id, input, handleSubmit, selectedModel, useSearch]);
 
   return (
     <div className={`flex h-full w-full flex-col max-h-[calc(100vh-5rem)]`}>
       <div className={`flex flex-col grow justify-between h-full`}>
-        {aiMessages.length < 1 && (
-          <div
-            className={`flex justify-center items-center grow ${
-              chatLoading || isLoading ? "opacity-0" : "opacity-100"
-            } transition-opacity duration-500`}
-          >
-            <Heading className={`text-3xl`}>How can I help you,&nbsp;</Heading>
-            <UserFullName className="text-3xl font-bold" />
-            <h1 className="text-3xl font-bold">!</h1>
-          </div>
-        )}
+        <div
+          ref={scrollView}
+          className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto transition-all duration-500 scroll-smooth`}
+        >
+          {error && (
+            <div className={`flex justify-center items-center max-w-[80%]`}>
+              <Alert variant={"destructive"} className={`shrink`}>
+                <AlertCircleIcon />
+                <AlertTitle>{error.message}</AlertTitle>
+                <AlertDescription className={`wrap-normal`}>
+                  <p>
+                    {error.stack?.toString() || "An unexpected error occurred."}
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
 
-        {aiMessages.length > 0 && (
-          <div
-            ref={scrollView}
-            className={`flex flex-col items-center gap-8 grow max-h-[80vh] py-12 overflow-y-auto transition-all duration-500`}
-          >
-            {error && (
-              <div className={`flex justify-center items-center max-w-[80%]`}>
-                <Alert variant={"destructive"} className={`shrink`}>
-                  <AlertCircleIcon />
-                  <AlertTitle>{error.message}</AlertTitle>
-                  <AlertDescription className={`wrap-normal`}>
-                    <p>
-                      {error.stack?.toString() ||
-                        "An unexpected error occurred."}
-                    </p>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
+          {!aiMessages.length && !isLoading && (
+            <div
+              className={`flex justify-center items-center justify-items-center grow`}
+            >
+              <Heading className={`text-3xl`}>
+                How can I help you,&nbsp;
+              </Heading>
+              <UserFullName className="text-3xl font-bold" />
+              <h1 className="text-3xl font-bold">!</h1>
+            </div>
+          )}
 
-            {aiMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex w-full max-w-[80%] ${
-                  message.role === "user" && "justify-end"
-                } `}
-              >
-                <div
-                  className={`whitespace-pre-wrap max-w-[70%] ${
-                    message.role === "user" && "bg-accent/75 "
-                  } px-4 py-2 rounded-xl`}
-                >
-                  <article className={`whitespace-normal `}>
-                    {message.parts?.map((m, i) => {
-                      switch (m.type) {
-                        case "text":
-                          return (
-                            <Markdown
-                              key={`${message.id}-${i}`}
-                              text={m.text}
-                            />
-                          );
-                      }
-                    })}
-                  </article>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          {aiMessages.map((message) => (
+            <Message message={message} key={message.id} />
+          ))}
+        </div>
 
         <div className={`flex justify-center items-center`}>
           <div className={`w-[60%]`}>
@@ -238,8 +195,18 @@ export default function HomeClient({ chatId }: HomeClientProps) {
 
                   <SelectContent>
                     <SelectItem value={`gpt-4o`}>GPT 4o</SelectItem>
+                    <SelectItem value={`gpt-4o-mini`}>GPT 4o mini</SelectItem>
 
-                    <SelectItem value={`claude-3-5-sonnet-20241022`}>
+                    <SelectItem value={`claude-sonnet-4-20250514`}>
+                      Claude Sonnet 4
+                    </SelectItem>
+                    <SelectItem value={`claude-opus-4-20250514`}>
+                      Claude Opus 4
+                    </SelectItem>
+                    <SelectItem value={`claude-3-7-sonnet-latest`}>
+                      Claude 3.7 Sonnet
+                    </SelectItem>
+                    <SelectItem value={`claude-3-5-sonnet-latest`}>
                       Claude 3.5 Sonnet
                     </SelectItem>
                   </SelectContent>
@@ -249,9 +216,7 @@ export default function HomeClient({ chatId }: HomeClientProps) {
                   onClick={() => setSearch(!useSearch)}
                   variant={"outline"}
                   className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
-                    useSearch
-                      ? "!text-accent-foreground !bg-blue-500/80"
-                      : ""
+                    useSearch ? "!text-accent-foreground !bg-blue-500/80" : ""
                   }`}
                   style={{
                     transition:
