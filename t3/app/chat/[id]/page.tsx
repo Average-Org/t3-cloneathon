@@ -1,5 +1,6 @@
 import HomeClient from "@/app/home-client";
 import { Tables } from "@/database.types";
+import { UserSettings } from "@/hooks/user-settings-store";
 import { createClient } from "@/lib/server";
 import { redirect } from "next/navigation";
 
@@ -69,7 +70,8 @@ export default async function ChatRoute({ params }: PageProps) {
   let {data: userSettingsData, error: userSettingsError} = await supabase
     .from("usersettings")
     .select()
-    .single()
+    .eq("user_id", user.data.user.id)
+    .limit(1);
 
   if(userSettingsError || !userSettingsData){
       let {data: insertedUserSettingsData, error: insertedErrorUserSettings} = await supabase
@@ -88,14 +90,17 @@ export default async function ChatRoute({ params }: PageProps) {
       userSettingsData = insertedUserSettingsData;
   }
 
-    console.log(userSettingsData);
+  if(!userSettingsData){
+    console.error("User settings data is null or undefined");
+    throw new Error("User settings not found");
+  }
 
   // get messages for the chat
   return (
     <HomeClient
       chat={chat}
       shouldReplaceUrl={shouldReplaceUrl}
-      userSettings={userSettingsData}
+      userSettings={userSettingsData[0] as UserSettings}
       messages={(messages || []) as Tables<"messages">[]}
     />
   );
