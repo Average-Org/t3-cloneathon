@@ -31,7 +31,7 @@ import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
 import { UserSettings, useUserSettingsStore } from "@/hooks/user-settings-store";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
-import { SelectGroup, SelectLabel } from "@radix-ui/react-select";
+import { SelectGroup } from "@radix-ui/react-select";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
