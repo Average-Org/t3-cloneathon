@@ -1,11 +1,13 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
+import { vertex } from "@ai-sdk/google-vertex";
+import { anthropic, AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import {
   streamText,
   createDataStreamResponse,
   LanguageModelV1,
   Message,
+  ToolSet,
 } from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
@@ -13,15 +15,18 @@ import {
   getModelSearchDefinition,
   ModelSearchDefinition,
 } from "@/lib/model-search-awareness";
+import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google/internal";
 
 interface ProviderResult {
   model: LanguageModelV1;
+  provider: string;
   searchCapability?: ModelSearchDefinition;
 }
 
-function getProvider(model: string, search: boolean) {
+function getProvider(model: string, search: boolean): ProviderResult {
   const provider: ProviderResult = {
     model: openai("gpt-4o"),
+    provider: "openai",
   };
 
   provider.searchCapability = getModelSearchDefinition(model);
@@ -42,24 +47,39 @@ function getProvider(model: string, search: boolean) {
     modelToUse.includes("openai") ||
     modelToUse.startsWith("o")
   ) {
-    return openai(modelToUse);
+    provider.model = openai.responses(modelToUse);
+    provider.provider = "openai";
   } else if (
     modelToUse.includes("claude") ||
     modelToUse.includes("anthropic")
   ) {
-    return anthropic(modelToUse);
+    provider.model = anthropic(modelToUse);
+    provider.provider = "anthropic";
+  } else if (modelToUse.includes("gemini")) {
+    provider.model = vertex(modelToUse, {
+      useSearchGrounding: search,
+    });
+    provider.provider = "google";
   } else {
     throw new Error(`Unsupported model: ${model}`);
   }
+
+  return provider;
 }
 
 export async function POST(req: Request) {
   const supabase = await createClient();
 
   const body = await req.json();
-  const { messages }: {messages: Message[] } = body;
+  const { messages }: { messages: Message[] } = body;
   const { data } = body;
-  const { conversationId: conversation, model, search, attachments } = data;
+  const {
+    conversationId: conversation,
+    model,
+    search,
+    attachments,
+    reasoning,
+  } = data;
   const {
     data: { user },
     error,
@@ -92,10 +112,39 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 403 });
   }
 
+  let tools: any = [];
+
+  const provider = getProvider(model, search);
+  if (search && provider.provider === "openai") {
+    tools = { ...tools, webSearch: openai.tools.webSearchPreview() };
+  } else if (search && provider.provider === "anthropic") {
+    tools = [
+      ...tools,
+      { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+    ];
+  }
+
+  let providerOptions: any = {};
+  if (reasoning && provider.provider === "openai") {
+    providerOptions.openai = { reasoningEffort: "high" };
+  } else if (reasoning && provider.provider === "anthropic") {
+    providerOptions.anthropic = {
+      thinking: { type: "enabled", budgetTokens: 12000 },
+    } satisfies AnthropicProviderOptions;
+  } else if (reasoning && provider.provider === "google") {
+    providerOptions.google = {
+      thinkingConfig: {
+        includeThoughts: true,
+      },
+    } satisfies GoogleGenerativeAIProviderOptions;
+  }
+
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
-        model: getProvider(model, search),
+        model: provider.model,
+        tools: tools,
+        providerOptions: providerOptions,
         messages: [
           {
             role: "system",
@@ -108,12 +157,17 @@ export async function POST(req: Request) {
           console.error("Error during streaming:", error);
           errorHandler(error);
         },
+        toolCallStreaming: true,
         onFinish: async (message) => {
           const { data, error } = await supabase.from("messages").insert({
             message: message.text,
             assistant: true,
             conversation: conversation,
+            sources: message.sources,
+            reasoning: message.reasoning,
           });
+
+          console.log(message);
 
           if (error) {
             console.error("Error inserting message:", error);
@@ -123,7 +177,7 @@ export async function POST(req: Request) {
           if (conversationData.name === "New Chat") {
             try {
               const titleResult = await streamText({
-                model: getProvider(model, search),
+                model: provider.model,
                 onError: (error) =>
                   console.error("Error generating conversation name: " + error),
                 onFinish: async (titleMessage) => {
@@ -165,21 +219,25 @@ export async function POST(req: Request) {
         },
       });
 
-      result.mergeIntoDataStream(stream);
+      result.mergeIntoDataStream(stream, {
+        sendReasoning: true,
+        sendUsage: true,
+        sendSources: true,
+      });
     },
     onError: (error) => {
       return errorHandler(error);
-    }
+    },
   });
 }
 
 export function errorHandler(error: unknown): string {
   if (error == null) {
-    console.error('unknown error');
-    return 'unknown error';
+    console.error("unknown error");
+    return "unknown error";
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     console.error(error);
     return error;
   }

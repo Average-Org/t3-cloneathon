@@ -16,9 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
   SelectLabel,
-
 } from "@/components/ui/select";
-import { AlertCircleIcon, BotIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  BotIcon,
+  BrainCircuitIcon,
+  BrainCogIcon,
+  BrainIcon,
+  BrushCleaningIcon,
+  BubblesIcon,
+} from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabaseClient";
@@ -29,12 +36,15 @@ import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
 import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
-import { UserSettings, useUserSettingsStore } from "@/hooks/user-settings-store";
+import {
+  UserSettings,
+  useUserSettingsStore,
+} from "@/hooks/user-settings-store";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
 import { SelectGroup } from "@radix-ui/react-select";
 import { set } from "zod";
 import { Attachment } from "ai";
-import { toString } from 'hast-util-to-string';
+import { toString } from "hast-util-to-string";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
@@ -51,16 +61,19 @@ export default function HomeClient({
   chat,
   messages,
   shouldReplaceUrl,
-  userSettings
+  userSettings,
 }: HomeClientProps) {
   const [useSearch, setSearch] = useState(false);
+  const [useReasoning, setReasoning] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const setChat = useConversationStore((state) => state.setChat);
   const activeChatId = useConversationStore((state) => state.activeId);
   const setActiveId = useConversationStore((state) => state.setActiveId);
   const [attachedFileUrls, setAttachedFileUrls] = useState<UploadedFile[]>([]);
-    const setUserSettings = useUserSettingsStore((state) => state.setUserSettings);
+  const setUserSettings = useUserSettingsStore(
+    (state) => state.setUserSettings
+  );
   const userSettingsState = useUserSettingsStore((state) => state.userSettings);
   const {
     messages: aiMessages,
@@ -70,19 +83,24 @@ export default function HomeClient({
     handleInputChange,
     handleSubmit,
     error,
-    isLoading,
+    status,
     stop,
+    data,
   } = useChat({
     api: "/api/chat",
     credentials: "include",
     initialMessages: messages.map(stateMessageToAiMessage),
     onError: (err) => {
       console.error("Error in chat:", err);
-    }
+    },
   });
 
   function canSearch(modelName: string) {
     return getModelSearchDefinition(modelName).canDoWebSearch;
+  }
+
+  function canReason(modelName: string) {
+    return getModelSearchDefinition(modelName).canReason;
   }
 
   const router = useRouter();
@@ -107,17 +125,21 @@ export default function HomeClient({
   }, [shouldReplaceUrl, chat, messages, setAiMessages, setChat, router]);
 
   useEffect(() => {
+    console.log(data);
+  }, [data]);
+
+  useEffect(() => {
     if (scrollView.current) {
       scrollView.current.scrollTop = scrollView.current.scrollHeight;
     }
   }, [aiMessages]);
 
   useEffect(() => {
-    if (activeChatId === chat?.id || !chat || isLoading) {
+    if (activeChatId === chat?.id || !chat) {
       return;
     }
     setActiveId(chat?.id || null);
-  }, [isLoading]);
+  }, []);
 
   useEffect(() => {
     setUserSettings(userSettings);
@@ -133,7 +155,6 @@ export default function HomeClient({
       return;
     }
 
-
     handleSubmit(
       {},
       {
@@ -141,7 +162,8 @@ export default function HomeClient({
           conversationId: chat.id,
           model: selectedModel,
           search: useSearch,
-        },  
+          reasoning: useReasoning,
+        },
         experimental_attachments: [
           ...attachedFileUrls.map((file) => ({
             name: file.url.split("/").pop() || "file",
@@ -156,7 +178,7 @@ export default function HomeClient({
       message: input,
       assistant: false,
       conversation: chat?.id,
-      attachments: JSON.stringify(attachedFileUrls)
+      attachments: JSON.stringify(attachedFileUrls),
     });
 
     console.log("Message inserted:", chat?.id);
@@ -176,7 +198,6 @@ export default function HomeClient({
     fileInput.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
-
         const uuid = crypto.randomUUID();
         const fileExtension =
           file.name.split(".").pop()?.toLowerCase() || "bin";
@@ -232,14 +253,15 @@ export default function HomeClient({
                   </p>
 
                   <p>
-                    {error.cause?.toString() || "No additional error information."}
+                    {error.cause?.toString() ||
+                      "No additional error information."}
                   </p>
                 </AlertDescription>
               </Alert>
             </div>
           )}
 
-          {!aiMessages.length && !isLoading && (
+          {!aiMessages.length && status === "ready" && (
             <div
               className={`flex justify-center items-center justify-items-center grow`}
             >
@@ -254,6 +276,14 @@ export default function HomeClient({
           {aiMessages.map((message) => (
             <Message message={message} key={message.id} />
           ))}
+
+          {status === "submitted" && (
+            <div className={`flex w-[80%] ml-6`}>
+              <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {status}
         </div>
 
         <div className={`flex justify-center items-center`}>
@@ -267,7 +297,7 @@ export default function HomeClient({
                 placeholder={`Type your message here...`}
               ></Textarea>
 
-              {isLoading ? (
+              {status === "streaming" ? (
                 <Button
                   onClick={stop}
                   variant={"outline"}
@@ -291,7 +321,32 @@ export default function HomeClient({
                     <SelectValue placeholder={"Automatic"} />
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent className={`h-80`}>
+                    <SelectGroup>
+                      <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
+                        Google
+                      </SelectLabel>
+
+                      <SelectItem value={`gemini-1.5-pro`}>
+                        Gemini 1.5 Pro
+                      </SelectItem>
+                      <SelectItem value={`gemini-1.5-flash`}>
+                        Gemini 1.5 Flash
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.0-flash`}>
+                        Gemini 2.0 Flash
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.0-flash-lite`}>
+                        Gemini 2.0 Flash Lite
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.5-pro-preview-06-05`}>
+                        Gemini 2.5 Pro Preview
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.5-flash-preview-05-20`}>
+                        Gemini 2.5 Flash Preview
+                      </SelectItem>
+                    </SelectGroup>
+
                     <SelectGroup>
                       <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
                         OpenAI
@@ -365,6 +420,26 @@ export default function HomeClient({
                 >
                   <PaperClipIcon className="stroke-2" />
                 </Button>
+
+                {canReason(selectedModel) && (
+                  <>
+                    <Button
+                      onClick={() => setReasoning(!useReasoning)}
+                      variant={"outline"}
+                      className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                        useReasoning
+                          ? "!text-accent-foreground !bg-blue-500/80"
+                          : ""
+                      }`}
+                      style={{
+                        transition:
+                          "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                      }}
+                    >
+                      <BrainIcon className="stroke-2" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>

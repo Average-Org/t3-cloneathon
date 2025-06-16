@@ -1,18 +1,29 @@
 import Markdown from "@/utils/markdown";
+import RenderMarkdown from "@/utils/reasoning";
 import { FilePart, UIMessage } from "ai";
+import Link from "next/link";
 import { memo, useMemo, useState } from "react";
 
 export const Message = memo(({ message }: { message: UIMessage }) => {
   const [hovering, setHovering] = useState(false);
 
+  console.log(message);
   // sort message parts by type, "file" first
-  const sortedParts = useMemo(() => {
+  const filesAndTextParts = useMemo(() => {
     if (!message.parts) return [];
-    return [...message.parts].sort((a, b) => {
+    return [...message.parts]
+      .filter((part) => part.type === "file" || part.type === "text" || part.type === "reasoning")
+      .sort((a, b) => {
       if (a.type === "file" && b.type !== "file") return -1;
       if (b.type === "file" && a.type !== "file") return 1;
       return 0;
-    });
+      });
+  }, [message.parts]);
+
+  const sources = useMemo(() => {
+    if(!message.parts) return [];
+    return [...message.parts]
+      .filter((part) => part.type === "source")
   }, [message.parts]);
 
   return (
@@ -42,8 +53,10 @@ export const Message = memo(({ message }: { message: UIMessage }) => {
             return null;
           })}
 
-          {sortedParts.map((m, i) => {
+          {filesAndTextParts.map((m, i) => {
             switch (m.type) {
+              case "reasoning":
+                return <RenderMarkdown key={`${message.id}-${i}`} text={m.reasoning} />;
               case "text":
                 return <Markdown key={`${message.id}-${i}`} text={m.text} />;
               case "file":
@@ -60,6 +73,17 @@ export const Message = memo(({ message }: { message: UIMessage }) => {
                 }
               }
           })}
+
+          {sources.length > 0 && (
+            <div className="text-xs text-muted-foreground mt-2 flex gap-2 flex-row wrap-anywhere overflow-y-auto">
+              {sources.map((source, i) => (
+                <Link href={source.source.url} className="hover:text-blue-400" key={i} >
+                  {source.source.title}
+                </Link>
+              ))}
+            </div>
+          )}
+      
         </article>
       </div>
     </div>
