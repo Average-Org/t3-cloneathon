@@ -42,6 +42,8 @@ export function AppSidebar({ children }: AppSidebarProps) {
   >([]);
   const [loading, setLoading] = useState(true);
   const chat = useConversationStore((state) => state.chat);
+  const activeChat = useConversationStore((state) => state.activeId);
+  const setActiveChat = useConversationStore((state) => state.setActiveId);
   const chatRef = React.useRef(chat);
   const updateCurrentChatName = useConversationStore(
     (state) => state.updateCurrentChatName
@@ -64,53 +66,44 @@ export function AppSidebar({ children }: AppSidebarProps) {
         },
         (payload) => {
           startTransition(() => {
-          console.log("Change received:", payload);
-          setConversations((prev) => {
-            const newRow = payload.new as Tables<"conversations">;
-            const oldRow = payload.old as Tables<"conversations">;
+            console.log("Change received:", payload);
+            setConversations((prev) => {
+              const newRow = payload.new as Tables<"conversations">;
+              const oldRow = payload.old as Tables<"conversations">;
 
-            // Helper to normalize conversation object
-            const normalize = (row: any) => ({
-              id: row.id,
-              name: row.name ?? "Untitled Chat",
-            });
+              // Helper to normalize conversation object
+              const normalize = (row: any) => ({
+                id: row.id,
+                name: row.name ?? "Untitled Chat",
+              });
 
-            console.log(
-              "Current chat:",
-              chatRef.current?.id,
-              "Updated chat:",
-              newRow.id,
-              "Old chat:",
-              oldRow.id
-            );
+              if (payload.eventType === "DELETE") {
+                return prev.filter((conv) => conv.id !== oldRow.id);
+              } else if (payload.eventType === "INSERT") {
+                return [normalize(newRow), ...prev];
+              } else if (payload.eventType === "UPDATE") {
+                if (
+                  chatRef.current?.id === oldRow.id &&
+                  newRow.name !== "New Chat"
+                ) {
+                  // If the current chat is the one that was inserted, update the chat state
+                  console.log(
+                    "Updating current chat name to:",
+                    newRow.name ?? "Untitled Chat"
+                  );
+                  startTransition(() => {
+                    updateCurrentChatName(newRow.name ?? "Untitled Chat");
+                  });
+                }
 
-            if (payload.eventType === "DELETE") {
-              return prev.filter((conv) => conv.id !== oldRow.id);
-            } else if (payload.eventType === "INSERT") {
-              return [normalize(newRow), ...prev];
-            } else if (payload.eventType === "UPDATE") {
-              if (
-                chatRef.current?.id === oldRow.id &&
-                newRow.name !== "New Chat"
-              ) {
-                // If the current chat is the one that was inserted, update the chat state
-                console.log(
-                  "Updating current chat name to:",
-                  newRow.name ?? "Untitled Chat"
+                return prev.map((conv) =>
+                  conv.id === newRow.id ? normalize(newRow) : conv
                 );
-                startTransition(() => {
-                  updateCurrentChatName(newRow.name ?? "Untitled Chat");
-                });
               }
-
-              return prev.map((conv) =>
-                conv.id === newRow.id ? normalize(newRow) : conv
-              );
-            }
-            return prev;
+              return prev;
+            });
           });
-        })
-      }
+        }
       )
       .subscribe();
 
@@ -163,6 +156,9 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
   const goToChat = React.useCallback(
     (id: string) => {
+      if (activeChat === id) return;
+      setActiveChat(id);
+
       router.push(`/chat/${id}`);
     },
     [router]
@@ -204,7 +200,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                   key={c.id + "sidebar"}
                   id={c.id}
                   name={c.name ?? "Untitled Chat"}
-                  active={chat?.id === c.id}
+                  active={activeChat === c.id}
                   onClick={goToChat}
                 />
               ))}

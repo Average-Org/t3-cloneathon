@@ -1,57 +1,96 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, createDataStreamResponse, LanguageModelV1 } from "ai";
+import { vertex } from "@ai-sdk/google-vertex";
+import { anthropic, AnthropicProviderOptions } from "@ai-sdk/anthropic";
+import {
+  streamText,
+  createDataStreamResponse,
+  LanguageModelV1,
+  Message,
+  ToolSet,
+} from "ai";
 import { createClient } from "@/utils/supabase/server";
 import { createServerClient } from "@supabase/ssr";
-import { getModelSearchDefinition, ModelSearchDefinition } from "@/lib/model-search-awareness";
+import {
+  getModelSearchDefinition,
+  ModelSearchDefinition,
+} from "@/lib/model-search-awareness";
+import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google/internal";
 
 interface ProviderResult {
   model: LanguageModelV1;
+  provider: string;
   searchCapability?: ModelSearchDefinition;
 }
 
-function getProvider(model: string, search: boolean) {
+function getProvider(model: string, search: boolean): ProviderResult {
   const provider: ProviderResult = {
     model: openai("gpt-4o"),
+    provider: "openai",
   };
-  
+
   provider.searchCapability = getModelSearchDefinition(model);
-  
+
   let modelToUse = "gpt-4o";
-  if(provider.searchCapability.canDoWebSearch && search && provider.searchCapability.modelSearchName){
-      modelToUse = provider.searchCapability.modelSearchName;
-  }else{
+  if (
+    provider.searchCapability.canDoWebSearch &&
+    search &&
+    provider.searchCapability.modelSearchName
+  ) {
+    modelToUse = provider.searchCapability.modelSearchName;
+  } else {
     modelToUse = provider.searchCapability.modelName;
   }
 
-  if (modelToUse.includes("gpt") || modelToUse.includes("openai") || modelToUse.startsWith("o")) {
-    return openai(modelToUse);
-  } else if (modelToUse.includes("claude") || modelToUse.includes("anthropic")) {
-    return anthropic(modelToUse);
+  if (
+    modelToUse.includes("gpt") ||
+    modelToUse.includes("openai") ||
+    modelToUse.startsWith("o")
+  ) {
+    provider.model = openai.responses(modelToUse);
+    provider.provider = "openai";
+  } else if (
+    modelToUse.includes("claude") ||
+    modelToUse.includes("anthropic")
+  ) {
+    provider.model = anthropic(modelToUse);
+    provider.provider = "anthropic";
+  } else if (modelToUse.includes("gemini")) {
+    provider.model = vertex(modelToUse, {
+      useSearchGrounding: search,
+    });
+    provider.provider = "google";
   } else {
     throw new Error(`Unsupported model: ${model}`);
   }
+
+  return provider;
 }
 
 export async function POST(req: Request) {
   const supabase = await createClient();
 
   const body = await req.json();
-  console.log(body);
-  const { messages, data } = body;
-  const { conversationId: conversation, model, search } = data;
+  const { messages }: { messages: Message[] } = body;
+  const { data } = body;
+  const {
+    conversationId: conversation,
+    model,
+    search,
+    attachments,
+    reasoning,
+  } = data;
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-
   console.log(
     user?.email +
-      ` sent a ${search ? 'web-search' : 'non-search'} request to AI (${model}) route in conversation ID: ` +
+      ` sent a ${
+        search ? "web-search" : "non-search"
+      } request to AI (${model}) route in conversation ID: ` +
       conversation
   );
-
   const { data: conversationData, error: conversationError } = await supabase
     .from("conversations")
     .select("*")
@@ -73,28 +112,62 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 403 });
   }
 
+  let tools: any = [];
+
+  const provider = getProvider(model, search);
+  if (search && provider.provider === "openai") {
+    tools = { ...tools, webSearch: openai.tools.webSearchPreview() };
+  } else if (search && provider.provider === "anthropic") {
+    tools = [
+      ...tools,
+      { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+    ];
+  }
+
+  let providerOptions: any = {};
+  if (reasoning && provider.provider === "openai") {
+    providerOptions.openai = { reasoningEffort: "high" };
+  } else if (reasoning && provider.provider === "anthropic") {
+    providerOptions.anthropic = {
+      thinking: { type: "enabled", budgetTokens: 12000 },
+    } satisfies AnthropicProviderOptions;
+  } else if (reasoning && provider.provider === "google") {
+    providerOptions.google = {
+      thinkingConfig: {
+        includeThoughts: true,
+      },
+    } satisfies GoogleGenerativeAIProviderOptions;
+  }
+
   return createDataStreamResponse({
     execute: async (stream) => {
       const result = streamText({
-        model: getProvider(model, search),
+        model: provider.model,
+        tools: tools,
+        providerOptions: providerOptions,
         messages: [
           {
             role: "system",
             content:
               "You are a helpful assistant. Answer the user's questions and be their friend. Please format your messages with Markdown.",
-            tools: {
-                web_search_preview: search ? openai.tools.webSearchPreview() : undefined, 
-            }
           },
           ...messages,
         ],
-        onError: handleError,
+        onError: (error) => {
+          console.error("Error during streaming:", error);
+          errorHandler(error);
+        },
+        toolCallStreaming: true,
         onFinish: async (message) => {
           const { data, error } = await supabase.from("messages").insert({
             message: message.text,
             assistant: true,
             conversation: conversation,
+            sources: message.sources,
+            reasoning: message.reasoning,
           });
+
+          console.log(message);
 
           if (error) {
             console.error("Error inserting message:", error);
@@ -104,7 +177,7 @@ export async function POST(req: Request) {
           if (conversationData.name === "New Chat") {
             try {
               const titleResult = await streamText({
-                model: getProvider(model,search),
+                model: provider.model,
                 onError: (error) =>
                   console.error("Error generating conversation name: " + error),
                 onFinish: async (titleMessage) => {
@@ -113,7 +186,7 @@ export async function POST(req: Request) {
                     titleMessage.text + " for conversation ID: " + conversation
                   );
 
-                  const {error} = await supabase
+                  const { error } = await supabase
                     .from("conversations")
                     .update({ name: titleMessage.text })
                     .eq("id", conversation);
@@ -122,7 +195,10 @@ export async function POST(req: Request) {
                     console.error("Error updating conversation name:", error);
                     return;
                   }
-                  console.log("Conversation name updated successfully:", titleMessage.text);
+                  console.log(
+                    "Conversation name updated successfully:",
+                    titleMessage.text
+                  );
                 },
                 messages: [
                   {
@@ -143,11 +219,35 @@ export async function POST(req: Request) {
         },
       });
 
-      result.mergeIntoDataStream(stream);
+      result.mergeIntoDataStream(stream, {
+        sendReasoning: true,
+        sendUsage: true,
+        sendSources: true,
+      });
+    },
+    onError: (error) => {
+      return errorHandler(error);
     },
   });
 }
 
-function handleError(error: unknown) {
-  console.error(error);
+export function errorHandler(error: unknown): string {
+  if (error == null) {
+    console.error("unknown error");
+    return "unknown error";
+  }
+
+  if (typeof error === "string") {
+    console.error(error);
+    return error;
+  }
+
+  if (error instanceof Error) {
+    console.error(error.message);
+    return error.message;
+  }
+
+  const errorString = JSON.stringify(error);
+  console.error(errorString);
+  return errorString;
 }

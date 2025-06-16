@@ -16,9 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
   SelectLabel,
-
 } from "@/components/ui/select";
-import { AlertCircleIcon, BotIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  BotIcon,
+  BrainCircuitIcon,
+  BrainCogIcon,
+  BrainIcon,
+  BrushCleaningIcon,
+  BubblesIcon,
+} from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabaseClient";
@@ -29,7 +36,10 @@ import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
 import { Message } from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
-import { UserSettings, useUserSettingsStore } from "@/hooks/user-settings-store";
+import {
+  UserSettings,
+  useUserSettingsStore,
+} from "@/hooks/user-settings-store";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
 import { SelectGroup } from "@radix-ui/react-select";
 interface HomeClientProps {
@@ -39,35 +49,55 @@ interface HomeClientProps {
   userSettings: UserSettings;
 }
 
+export interface UploadedFile {
+  url: string;
+  type: string;
+}
+
 export default function HomeClient({
   chat,
   messages,
   shouldReplaceUrl,
-  userSettings
+  userSettings,
 }: HomeClientProps) {
   const [useSearch, setSearch] = useState(false);
+  const [useReasoning, setReasoning] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState("gpt-4o");
   const setChat = useConversationStore((state) => state.setChat);
-  const setUserSettings = useUserSettingsStore((state) => state.setUserSettings);
+  const activeChatId = useConversationStore((state) => state.activeId);
+  const setActiveId = useConversationStore((state) => state.setActiveId);
+  const [attachedFileUrls, setAttachedFileUrls] = useState<UploadedFile[]>([]);
+  const setUserSettings = useUserSettingsStore(
+    (state) => state.setUserSettings
+  );
   const userSettingsState = useUserSettingsStore((state) => state.userSettings);
   const {
     messages: aiMessages,
     setMessages: setAiMessages,
     input,
+    setInput,
     handleInputChange,
     handleSubmit,
     error,
-    isLoading,
+    status,
     stop,
+    data,
   } = useChat({
     api: "/api/chat",
     credentials: "include",
     initialMessages: messages.map(stateMessageToAiMessage),
+    onError: (err) => {
+      console.error("Error in chat:", err);
+    },
   });
 
   function canSearch(modelName: string) {
     return getModelSearchDefinition(modelName).canDoWebSearch;
+  }
+
+  function canReason(modelName: string) {
+    return getModelSearchDefinition(modelName).canReason;
   }
 
   const router = useRouter();
@@ -92,14 +122,25 @@ export default function HomeClient({
   }, [shouldReplaceUrl, chat, messages, setAiMessages, setChat, router]);
 
   useEffect(() => {
+    console.log(data);
+  }, [data]);
+
+  useEffect(() => {
     if (scrollView.current) {
       scrollView.current.scrollTop = scrollView.current.scrollHeight;
     }
   }, [aiMessages]);
 
   useEffect(() => {
-        setUserSettings(userSettings);
-  }, [userSettings])
+    if (activeChatId === chat?.id || !chat) {
+      return;
+    }
+    setActiveId(chat?.id || null);
+  }, []);
+
+  useEffect(() => {
+    setUserSettings(userSettings);
+  }, [userSettings]);
 
   const insertMessage = useCallback(async () => {
     if (input.trim() === "" || input.length < 1) {
@@ -111,8 +152,6 @@ export default function HomeClient({
       return;
     }
 
-    console.log("Inserting message:", input);
-
     handleSubmit(
       {},
       {
@@ -120,7 +159,15 @@ export default function HomeClient({
           conversationId: chat.id,
           model: selectedModel,
           search: useSearch,
+          reasoning: useReasoning,
         },
+        experimental_attachments: [
+          ...attachedFileUrls.map((file) => ({
+            name: file.url.split("/").pop() || "file",
+            contentType: file.type,
+            url: file.url,
+          })),
+        ] as Attachment[],
       }
     );
 
@@ -128,6 +175,7 @@ export default function HomeClient({
       message: input,
       assistant: false,
       conversation: chat?.id,
+      attachments: JSON.stringify(attachedFileUrls),
     });
 
     console.log("Message inserted:", chat?.id);
@@ -135,7 +183,54 @@ export default function HomeClient({
       console.error("Error inserting message:", error);
       return;
     }
+
+    setAttachedFileUrls([]);
   }, [chat?.id, input, handleSubmit, selectedModel, useSearch]);
+
+  function uploadFile() {
+    // open file upload dialog
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const uuid = crypto.randomUUID();
+        const fileExtension =
+          file.name.split(".").pop()?.toLowerCase() || "bin";
+        // Upload the file to Supabase storage
+        const { data, error } = await supabase.storage
+          .from("file-uploads")
+          .upload(`${user.user?.id}/${uuid}.${fileExtension}`, file, {
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (error) {
+          console.error("Error uploading file:", error);
+          return;
+        }
+
+        if (data) {
+          const { data: publicUrlData } = await supabase.storage
+            .from("file-uploads")
+            .createSignedUrl(data.path, Number.MAX_SAFE_INTEGER);
+
+          if (publicUrlData) {
+            console.log("File uploaded successfully:", publicUrlData.signedUrl);
+            setAttachedFileUrls((prev) => [
+              ...prev,
+              {
+                url: publicUrlData.signedUrl,
+                type: file.type,
+              },
+            ]);
+          }
+        }
+      }
+    };
+    fileInput.click();
+  }
 
   return (
     <div className={`flex h-full w-full flex-col max-h-[calc(100vh-5rem)]`}>
@@ -153,12 +248,17 @@ export default function HomeClient({
                   <p>
                     {error.stack?.toString() || "An unexpected error occurred."}
                   </p>
+
+                  <p>
+                    {error.cause?.toString() ||
+                      "No additional error information."}
+                  </p>
                 </AlertDescription>
               </Alert>
             </div>
           )}
 
-          {!aiMessages.length && !isLoading && (
+          {!aiMessages.length && status === "ready" && (
             <div
               className={`flex justify-center items-center justify-items-center grow`}
             >
@@ -173,6 +273,14 @@ export default function HomeClient({
           {aiMessages.map((message) => (
             <Message message={message} key={message.id} />
           ))}
+
+          {status === "submitted" && (
+            <div className={`flex w-[80%] ml-6`}>
+              <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {status}
         </div>
 
         <div className={`flex justify-center items-center`}>
@@ -186,7 +294,7 @@ export default function HomeClient({
                 placeholder={`Type your message here...`}
               ></Textarea>
 
-              {isLoading ? (
+              {status === "streaming" ? (
                 <Button
                   onClick={stop}
                   variant={"outline"}
@@ -210,14 +318,43 @@ export default function HomeClient({
                     <SelectValue placeholder={"Automatic"} />
                   </SelectTrigger>
 
-                  <SelectContent>
+                  <SelectContent className={`h-80`}>
+                    <SelectGroup>
+                      <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
+                        Google
+                      </SelectLabel>
+
+                      <SelectItem value={`gemini-1.5-pro`}>
+                        Gemini 1.5 Pro
+                      </SelectItem>
+                      <SelectItem value={`gemini-1.5-flash`}>
+                        Gemini 1.5 Flash
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.0-flash`}>
+                        Gemini 2.0 Flash
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.0-flash-lite`}>
+                        Gemini 2.0 Flash Lite
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.5-pro-preview-06-05`}>
+                        Gemini 2.5 Pro Preview
+                      </SelectItem>
+                      <SelectItem value={`gemini-2.5-flash-preview-05-20`}>
+                        Gemini 2.5 Flash Preview
+                      </SelectItem>
+                    </SelectGroup>
+
                     <SelectGroup>
                       <SelectLabel className="text-sm py-1 pl-1 text-muted-foreground select-none">
                         OpenAI
                       </SelectLabel>
                       <SelectItem value={`gpt-4.1`}>GPT 4.1</SelectItem>
-                      <SelectItem value={`gpt-4.1-mini`}>GPT 4.1 mini</SelectItem>
-                      <SelectItem value={`gpt-4.1-nano`}>GPT 4.1 nano</SelectItem>
+                      <SelectItem value={`gpt-4.1-mini`}>
+                        GPT 4.1 mini
+                      </SelectItem>
+                      <SelectItem value={`gpt-4.1-nano`}>
+                        GPT 4.1 nano
+                      </SelectItem>
                       <SelectItem value={`o3-mini`}>GPT o3 mini</SelectItem>
                       <SelectItem value={`o4-mini`}>GPT o4 mini</SelectItem>
 
@@ -266,11 +403,40 @@ export default function HomeClient({
                 )}
 
                 <Button
+                  onClick={uploadFile}
                   variant={"outline"}
-                  className={`rounded-3xl !px-[0.75rem]`}
+                  className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                    attachedFileUrls.length > 0
+                      ? "!text-accent-foreground !bg-blue-500/80"
+                      : ""
+                  }`}
+                  style={{
+                    transition:
+                      "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                  }}
                 >
                   <PaperClipIcon className="stroke-2" />
                 </Button>
+
+                {canReason(selectedModel) && (
+                  <>
+                    <Button
+                      onClick={() => setReasoning(!useReasoning)}
+                      variant={"outline"}
+                      className={`rounded-3xl !px-[0.75rem] hover:scale-105 ${
+                        useReasoning
+                          ? "!text-accent-foreground !bg-blue-500/80"
+                          : ""
+                      }`}
+                      style={{
+                        transition:
+                          "background-color 400ms ease-in-out, color 400ms ease-in-out, scale 200ms ease-in-out",
+                      }}
+                    >
+                      <BrainIcon className="stroke-2" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
