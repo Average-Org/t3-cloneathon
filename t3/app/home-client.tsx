@@ -42,6 +42,7 @@ import {
 } from "@/hooks/user-settings-store";
 import { getModelSearchDefinition } from "@/lib/model-search-awareness";
 import { SelectGroup } from "@radix-ui/react-select";
+import { Attachment } from "ai";
 interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
@@ -324,12 +325,6 @@ export default function HomeClient({
                         Google
                       </SelectLabel>
 
-                      <SelectItem value={`gemini-1.5-pro`}>
-                        Gemini 1.5 Pro
-                      </SelectItem>
-                      <SelectItem value={`gemini-1.5-flash`}>
-                        Gemini 1.5 Flash
-                      </SelectItem>
                       <SelectItem value={`gemini-2.0-flash`}>
                         Gemini 2.0 Flash
                       </SelectItem>
