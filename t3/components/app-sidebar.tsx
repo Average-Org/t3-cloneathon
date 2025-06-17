@@ -278,7 +278,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
                   )}
                 </Button>
 
-                <Button variant={"ghost"} className={`rounded-3xl`}>
+                <Button onClick={() => router.push("/settings/")} variant={"ghost"} className={`rounded-3xl`}>
                   <AdjustmentsHorizontalIcon className={`size-6`} />
                 </Button>
               </div>
@@ -316,7 +316,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
               )}
             </Button>
 
-            <Button variant={"ghost"} className={`rounded-3xl`}>
+            <Button onClick={() => router.push("/settings/")} variant={"ghost"} className={`rounded-3xl`}>
               <AdjustmentsHorizontalIcon className={`size-6`} />
             </Button>
           </div>

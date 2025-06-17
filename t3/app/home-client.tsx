@@ -280,8 +280,6 @@ export default function HomeClient({
               <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
             </div>
           )}
-
-          {status}
         </div>
 
         <div className={`flex justify-center items-center`}>
