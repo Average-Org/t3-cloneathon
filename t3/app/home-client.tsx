@@ -161,6 +161,7 @@ export default function HomeClient({
           model: selectedModel,
           search: useSearch,
           reasoning: useReasoning,
+          userSettings: userSettingsState as any,
         },
         experimental_attachments: [
           ...attachedFileUrls.map((file) => ({

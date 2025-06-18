@@ -16,7 +16,8 @@ import {
   ModelSearchDefinition,
 } from "@/lib/model-search-awareness";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google/internal";
-import { google } from '@ai-sdk/google';
+import { google } from "@ai-sdk/google";
+import { Tables } from "@/database.types";
 
 interface ProviderResult {
   model: LanguageModelV1;
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
     search,
     attachments,
     reasoning,
+    userSettings,
   } = data;
   const {
     data: { user },
@@ -92,6 +94,8 @@ export async function POST(req: Request) {
       } request to AI (${model}) route in conversation ID: ` +
       conversation
   );
+
+  const typedUserSettings = userSettings as Tables<"usersettings">;
   const { data: conversationData, error: conversationError } = await supabase
     .from("conversations")
     .select("*")
@@ -149,8 +153,33 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content:
-              "You are a helpful assistant. Answer the user's questions and be their friend. Please format your messages with Markdown.",
+            content: `You are a helpful assistant. 
+              Answer the user's questions and be their friend.
+              ${
+                typedUserSettings?.name
+                  ? `The user's name is ${typedUserSettings.name}.`
+                  : ""
+              }
+              ${
+                typedUserSettings?.job
+                  ? `The user's profession is ${typedUserSettings.job}.`
+                  : ""
+              }
+              ${
+                typedUserSettings?.traits
+                  ? `The user wants you to have the following traits: ${
+                      Array.isArray(typedUserSettings.traits)
+                        ? typedUserSettings.traits.join(", ")
+                        : String(typedUserSettings.traits)
+                    }.`
+                  : ""
+              } 
+              ${
+                typedUserSettings?.additional_info
+                  ? `The user has provided additional information: ${typedUserSettings.additional_info}.`
+                  : ""
+              }
+              Please format your messages with Markdown.`,
           },
           ...messages,
         ],
