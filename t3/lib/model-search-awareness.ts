@@ -10,7 +10,7 @@ export function getModelSearchDefinition(modelName: string) {
     modelName: modelName,
     modelSearchName: modelName,
     canDoWebSearch: true,
-    canReason: true
+    canReason: true,
   };
 
   switch (def.modelName) {
@@ -38,27 +38,35 @@ export function getModelSearchDefinition(modelName: string) {
     }
     case "o3-mini": {
       def.canDoWebSearch = false;
-      break;  
+      break;
     }
     case "o4-mini": {
       def.canDoWebSearch = false;
-      break;  
+      break;
     }
     case "claude-3-7-sonnet-latest": {
-        def.canDoWebSearch = false;
-        break;  
+      def.canDoWebSearch = false;
+      break;
     }
     case "claude-3-5-sonnet-latest": {
-        def.canDoWebSearch = false;
-        break;
+      def.canDoWebSearch = false;
+      break;
     }
     case "claude-sonnet-4-20250514": {
-        def.canDoWebSearch = false;
-        break;
+      def.canDoWebSearch = false;
+      break;
     }
     case "claude-opus-4-20250514": {
-        def.canDoWebSearch = false;
-        break;
+      def.canDoWebSearch = false;
+      break;
+    }
+    case "gemini-2.0-flash": {
+      def.canReason = false;
+      break;
+    }
+    case "gemini-2.0-flash-lite": {
+      def.canReason = false;
+      break;
     }
   }
 

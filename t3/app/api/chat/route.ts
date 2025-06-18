@@ -16,6 +16,7 @@ import {
   ModelSearchDefinition,
 } from "@/lib/model-search-awareness";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google/internal";
+import { google } from '@ai-sdk/google';
 
 interface ProviderResult {
   model: LanguageModelV1;
@@ -56,7 +57,7 @@ function getProvider(model: string, search: boolean): ProviderResult {
     provider.model = anthropic(modelToUse);
     provider.provider = "anthropic";
   } else if (modelToUse.includes("gemini")) {
-    provider.model = vertex(modelToUse, {
+    provider.model = google(modelToUse, {
       useSearchGrounding: search,
     });
     provider.provider = "google";

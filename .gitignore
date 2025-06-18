@@ -128,3 +128,4 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+t3/gen-lang-client-0008929860-4d91850366bf.json
