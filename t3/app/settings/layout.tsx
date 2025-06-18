@@ -50,7 +50,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <AvatarImage src={user.user?.user_metadata?.avatar_url} />
             </Avatar>
             <div className="text-center">
-              <div className="text-xl font-medium">Average</div>
+              <div className="text-xl font-medium">{user.user?.user_metadata?.name}</div>
               <div className="text-sm text-gray-400">
                 {user.user?.email ?? "No email provided"}
               </div>
