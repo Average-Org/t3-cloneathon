@@ -174,7 +174,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
             onClick={toggleSidebar}
             className={`absolute left-5`}
           />
-          <Heading className={`text-center`}>T3.chat</Heading>
+          <Heading className={`text-center`}>RJ3.chat</Heading>
         </SidebarHeader>
         <SidebarContent className={`overflow-x-hidden`}>
           <SidebarGroup className={`flex flex-col items-center gap-3 `}>

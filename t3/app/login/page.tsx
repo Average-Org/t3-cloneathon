@@ -21,7 +21,7 @@ export default function Login() {
   return (
     <main>
       <div className="flex flex-col justify-center items-center h-screen space-y-4">
-        <h1 className="text-2xl font-semibold">Login to t3.chat</h1>
+        <h1 className="text-2xl font-semibold">Login to RJ3.chat</h1>
         <form onSubmit={(e) => e.preventDefault()}>
           <Button
             variant="default"
