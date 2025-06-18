@@ -6,7 +6,7 @@ import { useCallback } from "react"
 
 export default function Login() {
   const loginWithGithub = useCallback(async() => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
         redirectTo: `${location.origin}/login/callback`,

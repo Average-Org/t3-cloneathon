@@ -20,11 +20,7 @@ import {
 import {
   AlertCircleIcon,
   BotIcon,
-  BrainCircuitIcon,
-  BrainCogIcon,
   BrainIcon,
-  BrushCleaningIcon,
-  BubblesIcon,
 } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,7 +29,7 @@ import UserFullName from "@/components/Username";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useRouter } from "next/navigation";
 import { stateMessageToAiMessage } from "@/utils/stateMessageToAiMessage";
-import { Message } from "@/components/message";
+import Message  from "@/components/message";
 import { Tables } from "@/database.types";
 import { useConversationStore } from "@/hooks/use-conversation";
 import {
@@ -77,7 +73,6 @@ export default function HomeClient({
     messages: aiMessages,
     setMessages: setAiMessages,
     input,
-    setInput,
     handleInputChange,
     handleSubmit,
     error,
@@ -103,7 +98,6 @@ export default function HomeClient({
 
   const router = useRouter();
   const user = useCurrentUser();
-  const hasInitialized = useRef(false);
   const scrollView = useRef<HTMLDivElement>(null);
 
   function handleKey(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -161,7 +155,7 @@ export default function HomeClient({
           model: selectedModel,
           search: useSearch,
           reasoning: useReasoning,
-          userSettings: userSettingsState as any,
+          userSettings: userSettingsState ? JSON.parse(JSON.stringify(userSettingsState)) : null,
         },
         experimental_attachments: [
           ...attachedFileUrls.map((file) => ({

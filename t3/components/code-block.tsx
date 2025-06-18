@@ -1,4 +1,4 @@
-﻿import React, {useState} from "react";
+﻿import React from "react";
 import {ExtraProps} from "react-markdown";
 import {Button} from "@/components/ui/button";
 import {ClipboardCopyIcon} from "lucide-react";

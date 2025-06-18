@@ -1,6 +1,5 @@
 ﻿// app/api/chat/route.ts or pages/api/chat.ts
 import { openai } from "@ai-sdk/openai";
-import { vertex } from "@ai-sdk/google-vertex";
 import { anthropic, AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import {
   streamText,
@@ -10,7 +9,6 @@ import {
   ToolSet,
 } from "ai";
 import { createClient } from "@/utils/supabase/server";
-import { createServerClient } from "@supabase/ssr";
 import {
   getModelSearchDefinition,
   ModelSearchDefinition,
@@ -79,13 +77,11 @@ export async function POST(req: Request) {
     conversationId: conversation,
     model,
     search,
-    attachments,
     reasoning,
     userSettings,
   } = data;
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
   console.log(
     user?.email +
@@ -117,19 +113,31 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 403 });
   }
 
-  let tools: any = [];
+  interface Tool {
+    type?: string;
+    name?: string;
+    max_uses?: number;
+    [key: string]: unknown;
+  }
+
+  const tools: Tool[] = [];
 
   const provider = getProvider(model, search);
   if (search && provider.provider === "openai") {
-    tools = { ...tools, webSearch: openai.tools.webSearchPreview() };
+    tools.push(openai.tools.webSearchPreview());
   } else if (search && provider.provider === "anthropic") {
-    tools = [
-      ...tools,
-      { type: "web_search_20250305", name: "web_search", max_uses: 5 },
-    ];
+    tools.push({
+      type: "web_search_20250305",
+      name: "web_search",
+      max_uses: 5,
+    });
   }
 
-  let providerOptions: any = {};
+  const providerOptions: {
+    openai?: { reasoningEffort: string };
+    anthropic?: AnthropicProviderOptions;
+    google?: GoogleGenerativeAIProviderOptions;
+  } = {};
   if (reasoning && provider.provider === "openai") {
     providerOptions.openai = { reasoningEffort: "high" };
   } else if (reasoning && provider.provider === "anthropic") {
@@ -148,7 +156,7 @@ export async function POST(req: Request) {
     execute: async (stream) => {
       const result = streamText({
         model: provider.model,
-        tools: tools,
+        tools: tools as unknown as ToolSet,
         providerOptions: providerOptions,
         messages: [
           {
@@ -189,7 +197,7 @@ export async function POST(req: Request) {
         },
         toolCallStreaming: true,
         onFinish: async (message) => {
-          const { data, error } = await supabase.from("messages").insert({
+          const { error } = await supabase.from("messages").insert({
             message: message.text,
             assistant: true,
             conversation: conversation,
@@ -259,25 +267,25 @@ export async function POST(req: Request) {
       return errorHandler(error);
     },
   });
-}
 
-export function errorHandler(error: unknown): string {
-  if (error == null) {
-    console.error("unknown error");
-    return "unknown error";
+  function errorHandler(error: unknown): string {
+    if (error == null) {
+      console.error("unknown error");
+      return "unknown error";
+    }
+
+    if (typeof error === "string") {
+      console.error(error);
+      return error;
+    }
+
+    if (error instanceof Error) {
+      console.error(error.message);
+      return error.message;
+    }
+
+    const errorString = JSON.stringify(error);
+    console.error(errorString);
+    return errorString;
   }
-
-  if (typeof error === "string") {
-    console.error(error);
-    return error;
-  }
-
-  if (error instanceof Error) {
-    console.error(error.message);
-    return error.message;
-  }
-
-  const errorString = JSON.stringify(error);
-  console.error(errorString);
-  return errorString;
 }

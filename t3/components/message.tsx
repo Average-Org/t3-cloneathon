@@ -1,12 +1,12 @@
 import Markdown from "@/utils/markdown";
 import RenderMarkdown from "@/utils/reasoning";
-import { FilePart, UIMessage } from "ai";
+import { UIMessage } from "ai";
 import Link from "next/link";
 import { memo, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 
-export const Message = memo(({ message }: { message: UIMessage }) => {
+const Message = memo(({ message }: { message: UIMessage }) => {
   const [hovering, setHovering] = useState(false);
   const [copied, setCopied] = useState(false);
   const textToCopy = message.content;
@@ -82,7 +82,7 @@ export const Message = memo(({ message }: { message: UIMessage }) => {
                 case "text":
                   return <Markdown key={`${message.id}-${i}`} text={m.text} />;
                 case "file":
-                  const data = m.data as any;
+                  const data = m.data;
                   if (m.mimeType?.startsWith("image/")) {
                     return (
                       <img
@@ -128,3 +128,6 @@ export const Message = memo(({ message }: { message: UIMessage }) => {
     </div>
   );
 });
+
+Message.displayName = "Message";
+export default Message;

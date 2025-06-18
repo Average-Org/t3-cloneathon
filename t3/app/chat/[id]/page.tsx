@@ -1,14 +1,14 @@
 import HomeClient from "@/app/home-client";
 import { Tables } from "@/database.types";
 import { UserSettings } from "@/hooks/user-settings-store";
-import { createClient, getSupabase, getSupabaseUser } from "@/lib/server";
+import { getSupabase, getSupabaseUser } from "@/lib/server";
 import { redirect } from "next/navigation";
 
-type PageProps = {
-  params: { id: string };
-};
-
-export default async function ChatRoute({ params }: PageProps) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params;
 
   let chat: Tables<"conversations"> | null = null;
@@ -67,15 +67,17 @@ export default async function ChatRoute({ params }: PageProps) {
     // Don't redirect, just pass empty messages array
   }
 
+  let userSettingsData: Tables<"usersettings">[] | null = null;
   // fetch user settings
-  let { data: userSettingsData, error: userSettingsError } = await supabase
-    .from("usersettings")
-    .select()
-    .eq("user_id", user.data.user.id)
-    .limit(1);
+  const { data: initialSettings, error: userSettingsError } = await supabase
+  .from("usersettings")
+  .select()
+  .eq("user_id", user.data.user.id)
+  .limit(1);
 
-  if (userSettingsError || !userSettingsData || userSettingsData.length === 0) {
-    let { data: insertedUserSettingsData, error: insertedErrorUserSettings } =
+
+  if (userSettingsError || !initialSettings || initialSettings.length === 0) {
+    const { data: insertedUserSettingsData, error: insertedErrorUserSettings } =
       await supabase
         .from("usersettings")
         .insert({

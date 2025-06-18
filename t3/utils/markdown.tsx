@@ -34,7 +34,7 @@ const components: Components = {
         const match = /language-(\w+)/.exec(className || '')
         
         return match ? (
-            <CodeBlock{...props} ref={undefined} />
+            <CodeBlock {...props} />
         ) : (
             <code {...p} className="bg-sidebar/80 rounded px-[0.3rem] py-[0.25rem] text-sm font-mono" >
                 {children}

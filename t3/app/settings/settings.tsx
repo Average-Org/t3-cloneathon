@@ -55,11 +55,6 @@ export default function SettingsPage({ userSettings }: SettingsPageProps) {
         syncUserSettings();
     };
 
-    const handleLoadLegacyData = () => {
-        // Load legacy data logic here
-        console.log('Loading legacy data...');
-    };
-
     return (
         <div className="max-w-2xl space-y-8 flex justify-normal pt-8 bg-sidebar rounded-2xl p-4">
             <div className="space-y-6">

@@ -11,8 +11,7 @@ import {
 import { Heading } from "@/components/heading";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { LogInIcon, SearchIcon } from "lucide-react";
+import { LogInIcon } from "lucide-react";
 import * as React from "react";
 import { useEffect, useState, startTransition, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -72,10 +71,20 @@ export function AppSidebar({ children }: AppSidebarProps) {
               const oldRow = payload.old as Tables<"conversations">;
 
               // Helper to normalize conversation object
-              const normalize = (row: any) => ({
+                interface ConversationRow {
+                id: string;
+                name: string | null;
+                }
+
+                interface NormalizedConversation {
+                id: string;
+                name: string;
+                }
+
+                const normalize = (row: ConversationRow): NormalizedConversation => ({
                 id: row.id,
                 name: row.name ?? "Untitled Chat",
-              });
+                });
 
               if (payload.eventType === "DELETE") {
                 return prev.filter((conv) => conv.id !== oldRow.id);
@@ -119,7 +128,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
   useEffect(() => {
     const getConversations = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("conversations")
         .select("id,name")
         .order("created_at", { ascending: false });
@@ -161,7 +170,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
 
       router.push(`/chat/${id}`);
     },
-    [router]
+    [router, activeChat, setActiveChat]
   );
 
   return (

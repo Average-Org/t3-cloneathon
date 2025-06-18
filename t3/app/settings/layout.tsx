@@ -1,12 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { metadata } from "../layout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import UserProfilePicture from "@/components/ProfilePicture";
 import { Avatar } from "@/components/ui/avatar";
 import { AvatarImage } from "@radix-ui/react-avatar";
 

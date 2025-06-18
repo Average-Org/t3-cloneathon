@@ -1,5 +1,3 @@
-import HomeClient from "@/app/home-client";
-import { supabase } from "@/lib/supabaseClient";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
