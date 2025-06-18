@@ -65,7 +65,7 @@ export default function SettingsPage({ userSettings }: SettingsPageProps) {
             <div className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium mb-2">
-                        What should T3 Chat call you?
+                        What should RJ3 Chat call you?
                     </label>
                     <Input
                         value={name}
@@ -91,7 +91,7 @@ export default function SettingsPage({ userSettings }: SettingsPageProps) {
 
                 <div>
                     <label className="block text-sm font-medium mb-2">
-                        What traits should T3 Chat have? 
+                        What traits should RJ3 Chat have? 
                         <span className="text-muted-foreground text-sm"> (up to 50, max 100 chars each)</span>
                     </label>
                     <Input
@@ -118,7 +118,7 @@ export default function SettingsPage({ userSettings }: SettingsPageProps) {
 
                 <div>
                     <label className="block text-sm font-medium mb-2">
-                        Anything else T3 Chat should know about you?
+                        Anything else RJ3 Chat should know about you?
                     </label>
                     <Textarea
                         value={additionalInfo}
