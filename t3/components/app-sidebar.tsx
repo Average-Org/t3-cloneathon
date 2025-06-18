@@ -186,12 +186,12 @@ export function AppSidebar({ children }: AppSidebarProps) {
               <PencilSquareIcon className="w-5 h-5 absolute right-4" />
             </Button>
 
-            <Input
+            {/* <Input
               placeholder={`Search your threads...`}
               icon={<SearchIcon className={`w-4 h-4 text-muted-foreground`} />}
               className={`w-[90%] `}
               inputClassName={`border-0 !bg-transparent !rounded-b-none !border-b-2 focus:!ring-0`}
-            ></Input>
+            ></Input> */}
           </SidebarGroup>
           <SidebarGroup>
             {!loading &&
