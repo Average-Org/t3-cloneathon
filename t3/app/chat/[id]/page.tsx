@@ -74,7 +74,7 @@ export default async function ChatRoute({ params }: PageProps) {
     .eq("user_id", user.data.user.id)
     .limit(1);
 
-  if (userSettingsError || !userSettingsData) {
+  if (userSettingsError || !userSettingsData || userSettingsData.length === 0) {
     let { data: insertedUserSettingsData, error: insertedErrorUserSettings } =
       await supabase
         .from("usersettings")
