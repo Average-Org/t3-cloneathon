@@ -67,14 +67,13 @@ export default async function Page({
     // Don't redirect, just pass empty messages array
   }
 
-  let userSettingsData: Tables<"usersettings">[] | null = null;
+  let userSettingsData: Tables<"usersettings">[] = [];
   // fetch user settings
   const { data: initialSettings, error: userSettingsError } = await supabase
-  .from("usersettings")
-  .select()
-  .eq("user_id", user.data.user.id)
-  .limit(1);
-
+    .from("usersettings")
+    .select()
+    .eq("user_id", user.data.user.id)
+    .limit(1);
 
   if (userSettingsError || !initialSettings || initialSettings.length === 0) {
     const { data: insertedUserSettingsData, error: insertedErrorUserSettings } =
@@ -96,12 +95,9 @@ export default async function Page({
       throw new Error("There was an error inserting user settings");
     }
 
-    userSettingsData = insertedUserSettingsData;
-  }
-
-  if (!userSettingsData) {
-    console.error("User settings data is null or undefined");
-    throw new Error("User settings not found");
+    userSettingsData = [insertedUserSettingsData];
+  } else {
+    userSettingsData = initialSettings;
   }
 
   // get messages for the chat

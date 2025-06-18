@@ -43,7 +43,7 @@ interface HomeClientProps {
   chat: Tables<"conversations"> | null;
   messages: Tables<"messages">[];
   shouldReplaceUrl: boolean;
-  userSettings: UserSettings;
+  userSettings?: UserSettings | null;
 }
 
 export interface UploadedFile {
@@ -134,6 +134,9 @@ export default function HomeClient({
   }, []);
 
   useEffect(() => {
+    if (!userSettings) {
+      return;
+    }
     setUserSettings(userSettings);
   }, [userSettings]);
 
